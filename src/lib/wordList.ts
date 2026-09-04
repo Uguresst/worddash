@@ -1,11 +1,9 @@
 /**
- * WordDash'in kelime havuzu — her giriş bir İngilizce kelime + Türkçe
- * karşılığı. Günün kelimesi bu listeden tarihe göre deterministik
- * seçiliyor (bkz. dailyWord.ts), yani herkes aynı gün aynı kelimeyi çözüyor
- * (Wordle'daki gibi paylaşılabilir bir deneyim).
- *
- * Kelimeler bilinçli olarak 5-8 harf arası: 4'ten kısa scramble'da çok
- * kolay/anlamsız oluyor, 9'dan uzun ekranda harfleri sığdırmak zorlaşıyor.
+ * WordDash'in kelime havuzu. Bilinçli olarak ÇEŞİTLİ uzunlukta (2-9 harf)
+ * VE ARTAN ZORLUKTA sıralı: levels.ts bu diziyi index sırasıyla okuduğu
+ * için, dizideki sıra = oyundaki zorluk eğrisi. En kısa/en yaygın
+ * kelimeler baştaki seviyelerde, en uzun/az yaygın kelimeler sondaki
+ * seviyelerde -- "çok kolaydan çok zora" ilerleme buradan geliyor.
  */
 export interface WordEntry {
   word: string;
@@ -13,64 +11,79 @@ export interface WordEntry {
 }
 
 export const WORD_LIST: WordEntry[] = [
+  // 2 harf -- çok kolay
+  { word: 'go', tr: 'git' },
+  { word: 'up', tr: 'yukarı' },
+  { word: 'no', tr: 'hayır' },
+  { word: 'we', tr: 'biz' },
+
+  // 3 harf
+  { word: 'cat', tr: 'kedi' },
+  { word: 'dog', tr: 'köpek' },
+  { word: 'sun', tr: 'güneş' },
+  { word: 'cup', tr: 'fincan' },
+  { word: 'ear', tr: 'kulak' },
+  { word: 'key', tr: 'anahtar' },
+
+  // 4 harf
+  { word: 'book', tr: 'kitap' },
+  { word: 'fish', tr: 'balık' },
+  { word: 'bird', tr: 'kuş' },
+  { word: 'moon', tr: 'ay' },
+  { word: 'star', tr: 'yıldız' },
+  { word: 'tree', tr: 'ağaç' },
+  { word: 'lion', tr: 'aslan' },
+  { word: 'rose', tr: 'gül' },
+
+  // 5 harf
+  { word: 'house', tr: 'ev' },
+  { word: 'water', tr: 'su' },
+  { word: 'table', tr: 'masa' },
   { word: 'apple', tr: 'elma' },
-  { word: 'journey', tr: 'yolculuk' },
-  { word: 'brave', tr: 'cesur' },
-  { word: 'window', tr: 'pencere' },
-  { word: 'garden', tr: 'bahçe' },
-  { word: 'friend', tr: 'arkadaş' },
-  { word: 'mountain', tr: 'dağ' },
-  { word: 'river', tr: 'nehir' },
   { word: 'happy', tr: 'mutlu' },
-  { word: 'quiet', tr: 'sessiz' },
-  { word: 'bridge', tr: 'köprü' },
+  { word: 'tiger', tr: 'kaplan' },
+  { word: 'cloud', tr: 'bulut' },
+  { word: 'grape', tr: 'üzüm' },
+
+  // 6 harf -- orta
+  { word: 'garden', tr: 'bahçe' },
+  { word: 'window', tr: 'pencere' },
+  { word: 'animal', tr: 'hayvan' },
   { word: 'forest', tr: 'orman' },
-  { word: 'summer', tr: 'yaz' },
-  { word: 'winter', tr: 'kış' },
-  { word: 'autumn', tr: 'sonbahar' },
-  { word: 'spring', tr: 'ilkbahar' },
+  { word: 'flower', tr: 'çiçek' },
+  { word: 'family', tr: 'aile' },
+  { word: 'friend', tr: 'arkadaş' },
+  { word: 'banana', tr: 'muz' },
+  { word: 'rabbit', tr: 'tavşan' },
+  { word: 'guitar', tr: 'gitar' },
+
+  // 7 harf
   { word: 'kitchen', tr: 'mutfak' },
-  { word: 'dream', tr: 'rüya' },
-  { word: 'travel', tr: 'seyahat' },
-  { word: 'music', tr: 'müzik' },
-  { word: 'picture', tr: 'resim' },
-  { word: 'school', tr: 'okul' },
+  { word: 'morning', tr: 'sabah' },
   { word: 'teacher', tr: 'öğretmen' },
   { word: 'student', tr: 'öğrenci' },
-  { word: 'market', tr: 'pazar' },
-  { word: 'bicycle', tr: 'bisiklet' },
-  { word: 'weather', tr: 'hava durumu' },
-  { word: 'morning', tr: 'sabah' },
-  { word: 'evening', tr: 'akşam' },
-  { word: 'holiday', tr: 'tatil' },
-  { word: 'beach', tr: 'plaj' },
-  { word: 'island', tr: 'ada' },
-  { word: 'castle', tr: 'kale' },
-  { word: 'dragon', tr: 'ejderha' },
-  { word: 'wonder', tr: 'merak' },
-  { word: 'simple', tr: 'basit' },
-  { word: 'gentle', tr: 'nazik' },
-  { word: 'strong', tr: 'güçlü' },
-  { word: 'bright', tr: 'parlak' },
-  { word: 'shadow', tr: 'gölge' },
-  { word: 'planet', tr: 'gezegen' },
-  { word: 'ocean', tr: 'okyanus' },
-  { word: 'desert', tr: 'çöl' },
-  { word: 'jungle', tr: 'vahşi orman' },
-  { word: 'wisdom', tr: 'bilgelik' },
-  { word: 'courage', tr: 'cesaret' },
-  { word: 'freedom', tr: 'özgürlük' },
-  { word: 'justice', tr: 'adalet' },
-  { word: 'mystery', tr: 'gizem' },
-  { word: 'treasure', tr: 'hazine' },
-  { word: 'voyage', tr: 'deniz yolculuğu' },
-  { word: 'harvest', tr: 'hasat' },
-  { word: 'thunder', tr: 'gök gürültüsü' },
-  { word: 'lantern', tr: 'fener' },
-  { word: 'whisper', tr: 'fısıltı' },
-  { word: 'compass', tr: 'pusula' },
-  { word: 'horizon', tr: 'ufuk' },
-  { word: 'crystal', tr: 'kristal' },
-  { word: 'feather', tr: 'tüy' },
-  { word: 'candle', tr: 'mum' },
+  { word: 'journey', tr: 'yolculuk' },
+  { word: 'rainbow', tr: 'gökkuşağı' },
+  { word: 'dolphin', tr: 'yunus' },
+  { word: 'village', tr: 'köy' },
+
+  // 8 harf -- zor
+  { word: 'mountain', tr: 'dağ' },
+  { word: 'elephant', tr: 'fil' },
+  { word: 'computer', tr: 'bilgisayar' },
+  { word: 'umbrella', tr: 'şemsiye' },
+  { word: 'princess', tr: 'prenses' },
+  { word: 'dinosaur', tr: 'dinozor' },
+  { word: 'hospital', tr: 'hastane' },
+  { word: 'birthday', tr: 'doğum günü' },
+
+  // 9 harf -- çok zor
+  { word: 'butterfly', tr: 'kelebek' },
+  { word: 'telephone', tr: 'telefon' },
+  { word: 'chocolate', tr: 'çikolata' },
+  { word: 'newspaper', tr: 'gazete' },
+  { word: 'wonderful', tr: 'harika' },
+  { word: 'beautiful', tr: 'güzel' },
+  { word: 'adventure', tr: 'macera' },
+  { word: 'dangerous', tr: 'tehlikeli' },
 ];

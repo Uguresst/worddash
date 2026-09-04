@@ -13,3 +13,27 @@ body,
   20%, 60% { transform: translateX(-6px); }
   40%, 80% { transform: translateX(6px); }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.7) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Arkaplandaki bulanık, yavaşça süzülen ışık toplarının hareketi --
+   tamamen dekoratif, pointer-events-none, ekranın derinlik/canlılık
+   hissi vermesi için. */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, -30px) scale(1.08); }
+  66% { transform: translate(-15px, 15px) scale(0.95); }
+}
+
+@keyframes wheelGlow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.06); }
+}
