@@ -15,9 +15,10 @@ export default defineConfig({
       // gereksiz yer kaplamasınlar.
       includeManifestIcons: false,
       manifest: {
-        name: 'WordDash — Daily Word Scramble',
+        name: 'WordDash — Kelime Tekerleği',
         short_name: 'WordDash',
-        description: 'Günün İngilizce kelimesini karışık harflerden çöz, seri yap, kelime dağarcığını büyüt.',
+        description: 'Harf tekerleğinden İngilizce kelimeler kur, Türkçe ipuçlarıyla öğren, seviye atla ve jetonla tema aç.',
+        lang: 'tr',
         theme_color: '#0f172a',
         background_color: '#020617',
         display: 'standalone',
