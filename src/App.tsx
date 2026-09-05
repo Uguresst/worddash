@@ -37,6 +37,7 @@ export default function App() {
   const [solvedWord, setSolvedWord] = useState<WordEntry | null>(null);
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [wasNewBest, setWasNewBest] = useState(false);
+  const [starsEarned, setStarsEarned] = useState<1 | 2 | 3>(3);
 
   const lang = state.lang;
   const theme = themeById(state.activeTheme);
@@ -56,6 +57,7 @@ export default function App() {
       const next = completeLevel(state, word, usedHint);
       setCoinsEarned(next.coins - state.coins);
       setWasNewBest(next.bestStreak > prevBest);
+      setStarsEarned(revealedHint === 0 ? 3 : revealedHint === 1 ? 2 : 1);
       setSolvedWord(word);
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
@@ -83,12 +85,12 @@ export default function App() {
       <BackgroundOrbs />
       <header className="w-full max-w-md flex items-center justify-between mb-5">
         <div>
-          <h1 className={`font-black text-2xl tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
+          <h1 className={`font-display text-2xl font-extrabold tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
           <p className="text-xs text-white/50">{t('tagline', lang)}</p>
         </div>
         <div className="flex items-center gap-3">
           <CoinBadge icon="🪙" value={state.coins} label={t('coins', lang)} />
-          <CoinBadge icon="🔥" value={state.currentStreak} label={t('streak', lang)} />
+          <CoinBadge icon="🔥" value={state.currentStreak} label={t('streak', lang)} hot={state.currentStreak >= 3} />
           <div className="flex rounded-lg overflow-hidden border border-white/20 text-xs font-bold">
             <button
               onClick={() => changeLang('tr')}
@@ -113,7 +115,7 @@ export default function App() {
             view === 'game' ? theme.navActiveClass : 'bg-white/10 text-white/60'
           }`}
         >
-          🎮 {t('level', lang)} {state.level + 1}
+          🎮 <span className="font-display">{t('level', lang)} {state.level + 1}</span>
         </button>
         <button
           onClick={() => setView('vocab')}
@@ -160,7 +162,7 @@ export default function App() {
           {state.showTranslationHint && (
             <div className="w-full text-center mb-5 animate-[popIn_0.25s_ease-out]">
               <p className="text-[11px] text-white/50 uppercase tracking-wide">{t('translateWord', lang)}</p>
-              <p className="text-3xl font-black text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,0.35)]">
+              <p className="font-display text-3xl font-extrabold text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,0.35)]">
                 {word.tr}
               </p>
             </div>
@@ -173,7 +175,7 @@ export default function App() {
               return (
                 <div
                   key={i}
-                  className={`w-8 h-10 rounded-lg border-2 flex items-center justify-center text-lg font-black uppercase transition-colors ${
+                  className={`w-8 h-10 rounded-lg border-2 flex items-center justify-center font-display text-lg font-bold uppercase transition-colors ${
                     feedback === 'wrong'
                       ? 'border-rose-400 bg-rose-500/20 text-rose-200'
                       : isHint
@@ -253,7 +255,7 @@ export default function App() {
               >
                 <div className={`h-16 ${th.bgClass}`} />
                 <div className="bg-white/8 p-3">
-                  <p className="font-bold text-sm">{th.name}</p>
+                  <p className="font-display font-bold text-sm">{th.name}</p>
                   <p className="text-[11px] text-white/50 mb-2">
                     {th.price === 0 ? t('free', lang) : `🪙 ${th.price}`}
                   </p>
@@ -284,6 +286,7 @@ export default function App() {
           word={solvedWord}
           coinsEarned={coinsEarned}
           isNewBest={wasNewBest}
+          stars={starsEarned}
           lang={lang}
           onContinue={() => setSolvedWord(null)}
         />

@@ -145,7 +145,7 @@ export default function WordWheel({
             key={i}
             type="button"
             onPointerDown={(e) => handleDown(i, e.clientX, e.clientY)}
-            className={`absolute flex items-center justify-center rounded-full font-black uppercase text-xl shadow-lg transition-transform ${
+            className={`absolute flex items-center justify-center rounded-full font-display font-extrabold uppercase text-xl transition-transform active:scale-95 ${
               isSelected ? `${tileSelectedClass} scale-110` : 'bg-white text-slate-800'
             }`}
             style={{
@@ -153,6 +153,12 @@ export default function WordWheel({
               height: TILE_R * 2,
               left: p.x - TILE_R,
               top: p.y - TILE_R,
+              // "Fiziksel oyun parçası" hissi: alttan koyu bir kalınlık +
+              // üstten hafif parlaklık -- düz gölge yerine gerçek bir
+              // butona basıyormuş gibi hissettiriyor.
+              boxShadow: isSelected
+                ? '0 4px 0 rgba(0,0,0,0.25), 0 6px 14px rgba(0,0,0,0.35)'
+                : '0 3px 0 rgba(15,23,42,0.25), inset 0 2px 0 rgba(255,255,255,0.6), 0 4px 10px rgba(0,0,0,0.25)',
             }}
           >
             {char}
