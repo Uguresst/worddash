@@ -15,11 +15,16 @@ export default function CoinBadge({
   value,
   label,
   hot,
+  suffix,
+  suffixTitle,
 }: {
   icon: string;
   value: number;
   label: string;
   hot?: boolean;
+  /** Değerin yanına küçük bir rozet olarak eklenir -- örn. seri çarpanı "×2". */
+  suffix?: string;
+  suffixTitle?: string;
 }) {
   const [bump, setBump] = useState(false);
   const prev = useRef(value);
@@ -47,6 +52,14 @@ export default function CoinBadge({
           {icon}
         </span>{' '}
         {value}
+        {suffix && (
+          <span
+            title={suffixTitle}
+            className="ml-1 align-top text-[10px] font-display font-extrabold text-emerald-300"
+          >
+            {suffix}
+          </span>
+        )}
       </p>
       <p className="text-[10px] text-white/50 font-bold uppercase tracking-wide">{label}</p>
     </div>

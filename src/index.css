@@ -88,3 +88,12 @@ body {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-3%, 3%) scale(1.12); }
 }
+
+/* Sandık modalında açılmayı bekleyen kutunun hafifçe süzülmesi -- "beni aç"
+   diyen tek bir bekleyiş hareketi, açıldığında popIn'e devrediyor. drift/
+   flamePulse/wheelGlow'la aynı ailede: yavaş, sürekli, ease-in-out bir
+   bekleyiş döngüsü -- zıplama/sekme değil. */
+@keyframes chestFloat {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}

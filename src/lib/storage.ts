@@ -1,4 +1,5 @@
 import type { WordEntry } from './wordList';
+import { THEMES } from './themes';
 
 /**
  * v1: "günde bir kelime" (Wordle mantığı) kullanıcıyı sınırlıyordu --
@@ -45,6 +46,10 @@ export interface GameState {
   /** Mağazadan jetonla alınan, oyun içinde harcanan sarf malzemeleri (bkz. buyPowerup). */
   streakShields: number; // ipucu kullanınca seriyi kırılmaktan koruyor, kullanılınca 1 azalıyor
   skipTokens: number; // mevcut kelimeyi cezasız atlıyor
+  /** Bir sonraki ücretsiz sandığa kadar kazanılan doğru cevap sayısı (bkz. CHEST_WIN_TARGET). */
+  chestProgress: number;
+  /** Açılmayı bekleyen sandık sayısı -- ücretsiz kazanılmış veya jetonla satın alınmış olabilir. */
+  chestsReady: number;
 }
 
 const DEFAULT_STATE: GameState = {
@@ -62,6 +67,8 @@ const DEFAULT_STATE: GameState = {
   lastClaimDate: null,
   streakShields: 0,
   skipTokens: 0,
+  chestProgress: 0,
+  chestsReady: 0,
 };
 
 export function loadState(): GameState {
@@ -117,6 +124,19 @@ export function saveState(state: GameState): void {
 const COINS_PER_WIN = 2;
 const HINT_COIN_PENALTY_RATIO = 0.5; // ipucu kullanılırsa kazanılacak jetonun yarısı
 
+/**
+ * Seri ne kadar uzunsa kazanç o kadar büyür -- düz +2'yi TEK BAŞINA
+ * bırakmak yerine, seriyi canlı tutmayı (ve onu koruyan Seri Kalkanı'nı)
+ * doğrudan ödüllendiriyor. Eşikler bilinçli: 3'te ısınıyorsun, 7'de
+ * ateşlisin (zaten CoinBadge'in alev ikonu burada yanıyor), 15'te nadir.
+ */
+export function streakMultiplier(streak: number): number {
+  if (streak >= 15) return 3;
+  if (streak >= 7) return 2;
+  if (streak >= 3) return 1.5;
+  return 1;
+}
+
 /** Bir seviyeyi kazanınca: sıradaki seviyeye geç, coin ver, kelime dağarcığına ekle. */
 export function completeLevel(
   state: GameState,
@@ -130,7 +150,14 @@ export function completeLevel(
     : shieldConsumed
     ? state.currentStreak
     : 0;
-  const gained = Math.max(Math.round(COINS_PER_WIN * (usedHint ? HINT_COIN_PENALTY_RATIO : 1)), 1);
+  // Çarpan, BU cevaba girerken zaten sahip olduğun seriye göre hesaplanıyor --
+  // "şu an ne kadar ateşlisin" o anki serine bakar, henüz artmamış hâline değil.
+  const gained = Math.max(
+    Math.round(COINS_PER_WIN * streakMultiplier(state.currentStreak) * (usedHint ? HINT_COIN_PENALTY_RATIO : 1)),
+    1,
+  );
+  const chestProgress = state.chestProgress + 1;
+  const chestRollover = chestProgress >= CHEST_WIN_TARGET;
   const next: GameState = {
     ...state,
     level: state.level + 1,
@@ -140,6 +167,8 @@ export function completeLevel(
     bestStreak: Math.max(state.bestStreak, currentStreak),
     vocabulary: [...state.vocabulary, { ...entry, learnedAt: Date.now() }],
     streakShields: state.streakShields - (shieldConsumed ? 1 : 0),
+    chestProgress: chestRollover ? 0 : chestProgress,
+    chestsReady: state.chestsReady + (chestRollover ? 1 : 0),
   };
   saveState(next);
   return next;
@@ -262,6 +291,62 @@ export function breakStreakIfNeeded(state: GameState): GameState {
   const next = { ...state, currentStreak: 0 };
   saveState(next);
   return next;
+}
+
+export const CHEST_WIN_TARGET = 5; // her 5 doğru cevapta bir ücretsiz sandık
+export const CHEST_PRICE = 30; // beklemeden jetonla anında bir sandık
+
+export type ChestReward =
+  | { kind: 'coins'; amount: number }
+  | { kind: 'skip'; amount: number }
+  | { kind: 'shield'; amount: number }
+  | { kind: 'theme'; themeId: string };
+
+/**
+ * Ödül dağılımı bilinçli: en sık jeton (beklenti dengesini korur), orta
+ * sıklıkta bir güçlendirme, NADİREN (yüzde 5) henüz alınmamış bir tema --
+ * bu, jeton biriktirmenin "büyük ödül" ihtimaliyle heyecanlı hissetmesini
+ * sağlıyor. Alınacak tema kalmadıysa (hepsi açıksa) o dilim büyük bir
+ * jeton ikramiyesine düşüyor, böylece hiçbir ihtimal "boşa" gitmiyor.
+ */
+function rollChestReward(state: GameState): ChestReward {
+  const roll = Math.random();
+  const lockedThemes = THEMES.filter((th) => th.price > 0 && !state.unlockedThemes.includes(th.id));
+  if (roll < 0.05 && lockedThemes.length > 0) {
+    const th = lockedThemes[Math.floor(Math.random() * lockedThemes.length)];
+    return { kind: 'theme', themeId: th.id };
+  }
+  if (roll < 0.05) return { kind: 'coins', amount: 50 }; // tema dilimi ama hepsi zaten açık
+  if (roll < 0.2) return { kind: 'shield', amount: 1 };
+  if (roll < 0.45) return { kind: 'skip', amount: 1 };
+  return { kind: 'coins', amount: 5 + Math.floor(Math.random() * 11) }; // 5-15
+}
+
+/** Bekleme sırasını atlayıp jetonla anında bir sandık ekler -- açılışı ayrı adım (openChest). */
+export function buyChest(state: GameState): GameState {
+  if (state.coins < CHEST_PRICE) return state;
+  const next: GameState = { ...state, coins: state.coins - CHEST_PRICE, chestsReady: state.chestsReady + 1 };
+  saveState(next);
+  return next;
+}
+
+/** Sırada sandık yoksa hiçbir şey yapmadan (0 jetonluk sahte bir ödülle) döner --
+ *  çağıran taraf zaten chestsReady > 0 kontrolü yapmalı, bu son bir güvenlik. */
+export function openChest(state: GameState): { state: GameState; reward: ChestReward } {
+  if (state.chestsReady <= 0) return { state, reward: { kind: 'coins', amount: 0 } };
+  const reward = rollChestReward(state);
+  let next: GameState = { ...state, chestsReady: state.chestsReady - 1 };
+  if (reward.kind === 'coins') {
+    next = { ...next, coins: next.coins + reward.amount, totalCoinsEarned: next.totalCoinsEarned + reward.amount };
+  } else if (reward.kind === 'skip') {
+    next = { ...next, skipTokens: next.skipTokens + reward.amount };
+  } else if (reward.kind === 'shield') {
+    next = { ...next, streakShields: next.streakShields + reward.amount };
+  } else {
+    next = { ...next, unlockedThemes: [...next.unlockedThemes, reward.themeId] };
+  }
+  saveState(next);
+  return { state: next, reward };
 }
 
 /** Zaten sahip olunan bir temayı aktif eder -- satın alma değil, sadece seçim. */

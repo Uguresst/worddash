@@ -6,6 +6,8 @@ import BackgroundOrbs from './components/BackgroundOrbs';
 import Leaderboard from './components/Leaderboard';
 import OnboardingOverlay from './components/OnboardingOverlay';
 import DailyRewardModal from './components/DailyRewardModal';
+import ChestModal from './components/ChestModal';
+import InfoTooltip from './components/InfoTooltip';
 import { submitScore } from './lib/leaderboard';
 import { playTap, playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
@@ -24,9 +26,15 @@ import {
   skipLevel,
   buyPowerup,
   breakStreakIfNeeded,
+  streakMultiplier,
+  buyChest,
+  openChest,
+  CHEST_WIN_TARGET,
+  CHEST_PRICE,
   POWERUP_PRICES,
   type GameState,
   type PowerupKind,
+  type ChestReward,
 } from './lib/storage';
 import { celebrateWin } from './lib/celebrate';
 import { THEMES, themeById, themeName } from './lib/themes';
@@ -78,6 +86,7 @@ export default function App() {
   // içinden güncellemek, gereksiz render zincirini önlüyor.
   const [showDaily, setShowDaily] = useState(() => hasSeenOnboarding() && canClaimDaily(state));
   const [rankUp, setRankUp] = useState<Rank | null>(null);
+  const [showChest, setShowChest] = useState(false);
 
   const lang = state.lang;
   const theme = themeById(state.activeTheme);
@@ -89,6 +98,7 @@ export default function App() {
     ? (state.level - rank.minLevel) / (upcomingRank.minLevel - rank.minLevel)
     : 1;
   const dailyPreview = previewDailyReward(state);
+  const multiplier = streakMultiplier(state.currentStreak);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -180,6 +190,30 @@ export default function App() {
     haptics.tap();
   }
 
+  /** Sandık zaten hazırsa direkt açılış modalını gösterir; değilse ve
+   *  yeterli jeton varsa önce jetonla bir tane satın alıp aynı modalı açar. */
+  function handleChestTap() {
+    if (state.chestsReady > 0) {
+      setShowChest(true);
+      return;
+    }
+    if (state.coins >= CHEST_PRICE) {
+      setState(buyChest(state));
+      setShowChest(true);
+    }
+  }
+
+  /** ChestModal'a geçilen `onOpen` -- gerçek state mutasyonu ve ses/titreşim
+   *  burada, modal sadece "aç" anını gösterip dönen ödülü render ediyor. */
+  function handleOpenChest(): ChestReward {
+    const { state: next, reward } = openChest(state);
+    setState(next);
+    celebrateWin();
+    playCelebrate();
+    haptics.correct();
+    return reward;
+  }
+
   return (
     <div className={`min-h-screen ${theme.bgClass} text-white flex flex-col items-center px-4 pt-6 pb-28 transition-colors duration-500 relative overflow-hidden`}>
       {/* İnce noktalı doku: renkli bulanık toplar (BackgroundOrbs) tek başına
@@ -227,7 +261,14 @@ export default function App() {
         </div>
         <div className="flex items-center gap-3">
           <CoinBadge icon="🪙" value={state.coins} label={t('coins', lang)} />
-          <CoinBadge icon="🔥" value={state.currentStreak} label={t('streak', lang)} hot={state.currentStreak >= 3} />
+          <CoinBadge
+            icon="🔥"
+            value={state.currentStreak}
+            label={t('streak', lang)}
+            hot={state.currentStreak >= 3}
+            suffix={multiplier > 1 ? `×${multiplier}` : undefined}
+            suffixTitle={t('streakMultiplierInfo', lang)}
+          />
           <button
             onClick={handleToggleMute}
             title={muted ? t('soundOff', lang) : t('soundOn', lang)}
@@ -309,33 +350,72 @@ export default function App() {
           {/* Güçlendirmeleri Mağaza'ya gitmeden, ana ekrandan tek dokunuşla
               satın alabilme -- kullanıcı ihtiyacı anında (elindeki bitince)
               gördüğü yerden alsın diye. Aynı handleBuyPowerup'ı Mağaza'daki
-              tam kartlar da kullanıyor, mantık tek yerde. */}
+              tam kartlar da kullanıyor, mantık tek yerde. Info baloncuğu
+              AYRI bir <button>: satın alma butonunun İÇİNE gömülü olsaydı
+              tarayıcı iç içe <button> render edemezdi. */}
           <div className="w-full flex gap-2 mb-3">
             {(
               [
-                { kind: 'shield' as PowerupKind, icon: '🛡️', count: state.streakShields },
-                { kind: 'skip' as PowerupKind, icon: '🎟️', count: state.skipTokens },
+                { kind: 'shield' as PowerupKind, icon: '🛡️', count: state.streakShields, info: t('streakShieldInfo', lang) },
+                { kind: 'skip' as PowerupKind, icon: '🎟️', count: state.skipTokens, info: t('skipJokerInfo', lang) },
               ]
             ).map((p) => {
               const price = POWERUP_PRICES[p.kind];
               const affordable = state.coins >= price;
               return (
-                <button
-                  key={p.kind}
-                  onClick={() => handleBuyPowerup(p.kind)}
-                  disabled={!affordable}
-                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-bold transition-colors active:scale-95 ${
-                    affordable
-                      ? 'bg-white/10 border-white/20 hover:bg-white/15 text-white'
-                      : 'bg-white/5 border-white/10 text-white/30'
-                  }`}
-                >
-                  <span className="text-base">{p.icon}</span>
-                  {p.count > 0 && <span className="text-emerald-300">×{p.count}</span>}
-                  <span className="opacity-70">🪙{price}</span>
-                </button>
+                <div key={p.kind} className="relative flex-1">
+                  <button
+                    onClick={() => handleBuyPowerup(p.kind)}
+                    disabled={!affordable}
+                    className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-bold transition-colors active:scale-95 ${
+                      affordable
+                        ? 'bg-white/10 border-white/20 hover:bg-white/15 text-white'
+                        : 'bg-white/5 border-white/10 text-white/30'
+                    }`}
+                  >
+                    <span className="text-base">{p.icon}</span>
+                    {p.count > 0 && <span className="text-emerald-300">×{p.count}</span>}
+                    <span className="opacity-70">🪙{price}</span>
+                  </button>
+                  <div className="absolute -top-1.5 -right-1.5">
+                    <InfoTooltip text={p.info} />
+                  </div>
+                </div>
               );
             })}
+
+            {/* Sandık: ücretsiz ilerlemesi (5 doğru cevapta 1) veya jetonla
+                anında satın alma -- iki farklı durumu TEK butonda gösteriyor. */}
+            <div className="relative flex-1">
+              <button
+                onClick={handleChestTap}
+                title={
+                  state.chestsReady > 0
+                    ? t('chestReady', lang)
+                    : `${state.chestProgress}/${CHEST_WIN_TARGET} ${t('chestProgress', lang)}`
+                }
+                disabled={state.chestsReady === 0 && state.coins < CHEST_PRICE}
+                className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-bold transition-colors active:scale-95 ${
+                  state.chestsReady > 0
+                    ? 'bg-amber-400/20 border-amber-400/50 text-amber-200 animate-pulse'
+                    : state.coins >= CHEST_PRICE
+                    ? 'bg-white/10 border-white/20 hover:bg-white/15 text-white'
+                    : 'bg-white/5 border-white/10 text-white/30'
+                }`}
+              >
+                <span className="text-base">{state.chestsReady > 0 ? '🎁' : '📦'}</span>
+                {state.chestsReady > 0 ? (
+                  <span className="truncate">{t('chestOpenNow', lang)}</span>
+                ) : (
+                  <span className="opacity-70 truncate">
+                    {state.chestProgress}/{CHEST_WIN_TARGET}
+                  </span>
+                )}
+              </button>
+              <div className="absolute -top-1.5 -right-1.5">
+                <InfoTooltip text={t('chestInfo', lang)} />
+              </div>
+            </div>
           </div>
 
           {/* Rütbe ilerleme çubuğu: bir sonraki rütbeye ne kadar kaldığını
@@ -550,6 +630,34 @@ export default function App() {
                 </div>
               );
             })}
+
+            {/* Sandık burada da alınabiliyor -- Mağaza'yı gezen ama Oyun
+                sekmesindeki kısayolu fark etmemiş biri için tam açıklamalı
+                hali. col-span-2: diğer iki kart gibi dar değil, kendi
+                satırında geniş duruyor -- sandık kavramının önemini
+                görsel olarak da vurguluyor. */}
+            <div className="col-span-2 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] flex items-center gap-3">
+              <span className="text-3xl shrink-0">{state.chestsReady > 0 ? '🎁' : '📦'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-display font-bold text-sm">
+                  {state.chestsReady > 0 ? t('chestReady', lang) : `${t('chestProgress', lang)} ${state.chestProgress}/${CHEST_WIN_TARGET}`}
+                </p>
+                <p className="text-[10px] text-white/50 leading-tight">{t('chestInfo', lang)}</p>
+              </div>
+              <button
+                onClick={handleChestTap}
+                disabled={state.chestsReady === 0 && state.coins < CHEST_PRICE}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  state.chestsReady > 0
+                    ? 'bg-amber-400 text-slate-900'
+                    : state.coins >= CHEST_PRICE
+                    ? 'bg-emerald-400 text-slate-900'
+                    : 'bg-white/10 text-white/30'
+                }`}
+              >
+                {state.chestsReady > 0 ? t('chestOpenNow', lang) : `${t('buy', lang)} · 🪙${CHEST_PRICE}`}
+              </button>
+            </div>
           </div>
 
           <p className="font-display text-xs font-extrabold uppercase tracking-wide text-white/50 mb-2">
@@ -630,6 +738,10 @@ export default function App() {
           previewStreak={dailyPreview.streak}
           onClaim={handleClaimDaily}
         />
+      )}
+
+      {showChest && (
+        <ChestModal lang={lang} onOpen={handleOpenChest} onClose={() => setShowChest(false)} />
       )}
 
       {solvedWord && (
