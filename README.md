@@ -69,13 +69,13 @@ içeriyor, tip hatası varsa build patlar.
 
 ## Yapılacaklar
 
-- **Deploy.** Henüz hiçbir yere yayınlanmadı. Ücretsiz bir Vercel/Netlify
-  alt alan adına deploy edilmesi lazım — hem telefonda test, hem de aşağıdaki
-  TWA adımının ön koşulu.
+- ~~**Deploy.**~~ **Bitti** — [worddash-seven.vercel.app](https://worddash-seven.vercel.app),
+  GitHub'a bağlı ([github.com/Uguresst/worddash](https://github.com/Uguresst/worddash)),
+  push'ta otomatik yeniden deploy oluyor (Afsar Gym Lab'la aynı akış).
+  Manifest ve tüm ikonlar canlıda doğrulandı.
 - **Android'e TWA olarak paketleme.** Afsar Gym Lab'da kullandığımız
-  Bubblewrap akışı burada da aynen uygulanabilir; önce yukarıdaki deploy
-  şart (Bubblewrap 512×512 PNG ikonu ağdan okuyor —
-  [`public/icons/icon-512.png`](public/icons/icon-512.png) hazır).
+  Bubblewrap akışı burada da aynen uygulanabilir — deploy şartı artık
+  karşılandı, sıradaki adım bu.
 - **Kelime listesini büyütmek / temalandırmak** (ör. yiyecek, hayvan,
   seyahat paketleri) düşünülebilir. Şu an 198 kelime, tek havuz.
 
