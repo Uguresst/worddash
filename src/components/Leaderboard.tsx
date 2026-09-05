@@ -111,14 +111,23 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
         <ol className="space-y-1.5">
           {rows.map((r, i) => {
             const isMe = r.id === myId;
+            // İlk üç için madalya -- sıralamayı sayı olarak değil, göz alışkın
+            // olduğu bir sembolle okumak "rekabet" hissini güçlendiriyor.
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
             return (
               <li
                 key={r.id}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
-                  isMe ? `${navActiveClass} shadow-lg` : 'bg-white/8 border border-white/10'
+                  isMe
+                    ? `${navActiveClass} shadow-lg`
+                    : i === 0
+                    ? 'bg-amber-400/15 border border-amber-400/40'
+                    : 'bg-white/8 border border-white/10'
                 }`}
               >
-                <span className="font-display font-extrabold w-6 text-center shrink-0">{i + 1}</span>
+                <span className="font-display font-extrabold w-6 text-center shrink-0 text-base">
+                  {medal ?? i + 1}
+                </span>
                 <span className="flex-1 min-w-0 truncate font-semibold">
                   {r.nickname} {isMe && <span className="opacity-60 text-xs">({t('you', lang)})</span>}
                 </span>

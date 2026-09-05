@@ -31,6 +31,17 @@ export interface GameState {
    * AÇIK: bu, kullanıcının istediği en önemli değişiklikti.
    */
   showTranslationHint: boolean;
+  /**
+   * Harcansa bile ÖMÜR BOYU kazanılan toplam jeton -- `coins` tema alınca
+   * azalabildiği için jeton rozetlerinin (100/500 jeton) bir kere açılıp
+   * sonra "geri kapanması" gibi tuhaf bir davranışı önlemek için ayrı
+   * tutuluyor. Sadece artar, hiç düşmez.
+   */
+  totalCoinsEarned: number;
+  /** Günlük ödül serisi -- art arda gün (üst sınır 7, oradan sonra ödül sabitleniyor). */
+  dailyStreak: number;
+  /** Son ödülün toplandığı gün, 'YYYY-MM-DD' -- bugünle aynıysa tekrar toplanamaz. */
+  lastClaimDate: string | null;
 }
 
 const DEFAULT_STATE: GameState = {
@@ -43,6 +54,9 @@ const DEFAULT_STATE: GameState = {
   showTranslationHint: true,
   unlockedThemes: ['aurora'],
   activeTheme: 'aurora',
+  totalCoinsEarned: 0,
+  dailyStreak: 0,
+  lastClaimDate: null,
 };
 
 export function loadState(): GameState {
@@ -98,16 +112,67 @@ export function completeLevel(
   usedHint: boolean,
 ): GameState {
   const currentStreak = usedHint ? 0 : state.currentStreak + 1;
+  const gained = Math.max(COINS_PER_WIN - (usedHint ? HINT_COIN_PENALTY : 0), 1);
   const next: GameState = {
     ...state,
     level: state.level + 1,
-    coins: state.coins + Math.max(COINS_PER_WIN - (usedHint ? HINT_COIN_PENALTY : 0), 1),
+    coins: state.coins + gained,
+    totalCoinsEarned: state.totalCoinsEarned + gained,
     currentStreak,
     bestStreak: Math.max(state.bestStreak, currentStreak),
     vocabulary: [...state.vocabulary, { ...entry, learnedAt: Date.now() }],
   };
   saveState(next);
   return next;
+}
+
+const DAILY_BASE = 15;
+const DAILY_STEP = 5;
+const DAILY_STREAK_CAP = 7;
+
+function todayKeyStr(d = new Date()): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function isConsecutiveDay(prevKey: string | null, todayKey: string): boolean {
+  if (!prevKey) return false;
+  const prev = new Date(`${prevKey}T00:00:00Z`).getTime();
+  const today = new Date(`${todayKey}T00:00:00Z`).getTime();
+  return today - prev === 86_400_000;
+}
+
+/** Bugün zaten toplandıysa false -- buton disable etmek/modalı gizlemek için. */
+export function canClaimDaily(state: GameState): boolean {
+  return state.lastClaimDate !== todayKeyStr();
+}
+
+/**
+ * State'i DEĞİŞTİRMEDEN bugün toplarsa ne kadar jeton alacağını ve serisinin
+ * kaça çıkacağını hesaplar -- modalda "topla" düğmesine basmadan önce
+ * gösterilecek önizleme için.
+ */
+export function previewDailyReward(state: GameState): { amount: number; streak: number } {
+  const today = todayKeyStr();
+  if (state.lastClaimDate === today) return { amount: 0, streak: state.dailyStreak };
+  const streak = isConsecutiveDay(state.lastClaimDate, today)
+    ? Math.min(state.dailyStreak + 1, DAILY_STREAK_CAP)
+    : 1;
+  return { amount: DAILY_BASE + (streak - 1) * DAILY_STEP, streak };
+}
+
+/** Günlük ödülü gerçekten toplar -- jetonu ekler, seriyi ilerletir, kaydeder. */
+export function claimDailyReward(state: GameState): { state: GameState; amount: number; streak: number } {
+  const { amount, streak } = previewDailyReward(state);
+  if (amount === 0) return { state, amount: 0, streak };
+  const next: GameState = {
+    ...state,
+    coins: state.coins + amount,
+    totalCoinsEarned: state.totalCoinsEarned + amount,
+    dailyStreak: streak,
+    lastClaimDate: todayKeyStr(),
+  };
+  saveState(next);
+  return { state: next, amount, streak };
 }
 
 export function setLang(state: GameState, lang: 'tr' | 'en'): GameState {

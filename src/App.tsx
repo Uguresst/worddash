@@ -5,8 +5,9 @@ import LevelCompleteModal from './components/LevelCompleteModal';
 import BackgroundOrbs from './components/BackgroundOrbs';
 import Leaderboard from './components/Leaderboard';
 import OnboardingOverlay from './components/OnboardingOverlay';
+import DailyRewardModal from './components/DailyRewardModal';
 import { submitScore } from './lib/leaderboard';
-import { playCorrect, playWrong, playCelebrate, isMuted, toggleMuted } from './lib/sound';
+import { playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
 import { wordForLevel, TOTAL_WORDS, difficultyOf, type Difficulty } from './lib/levels';
 import { scrambleWord } from './lib/scramble';
@@ -17,10 +18,15 @@ import {
   buyTheme,
   selectTheme,
   toggleTranslationHint,
+  canClaimDaily,
+  previewDailyReward,
+  claimDailyReward,
   type GameState,
 } from './lib/storage';
 import { celebrateWin } from './lib/celebrate';
-import { THEMES, themeById } from './lib/themes';
+import { THEMES, themeById, themeName } from './lib/themes';
+import { rankForLevel, nextRank, type Rank } from './lib/ranks';
+import { ACHIEVEMENTS, isUnlocked } from './lib/achievements';
 import { t } from './lib/i18n';
 import type { WordEntry } from './lib/wordList';
 
@@ -54,15 +60,35 @@ export default function App() {
   const [starsEarned, setStarsEarned] = useState<1 | 2 | 3>(3);
   const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenOnboarding());
   const [muted, setMuted] = useState(() => isMuted());
+  // Onboarding hiç gösterilmeyecekse (döngüsel kullanıcı) doğrudan başlangıç
+  // koşuluna göre kur; gösterilecekse dismissOnboarding() kapanış ANINDA
+  // kontrol edip açıyor -- bir effect yerine "değişikliğe sebep olan olay"
+  // içinden güncellemek, gereksiz render zincirini önlüyor.
+  const [showDaily, setShowDaily] = useState(() => hasSeenOnboarding() && canClaimDaily(state));
+  const [rankUp, setRankUp] = useState<Rank | null>(null);
 
   const lang = state.lang;
   const theme = themeById(state.activeTheme);
   const justLooped = state.level > 0 && state.level % TOTAL_WORDS === 0;
   const difficulty = difficultyOf(word.word);
+  const rank = rankForLevel(state.level);
+  const upcomingRank = nextRank(state.level);
+  const rankProgress = upcomingRank
+    ? (state.level - rank.minLevel) / (upcomingRank.minLevel - rank.minLevel)
+    : 1;
+  const dailyPreview = previewDailyReward(state);
 
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  function handleClaimDaily() {
+    const { state: next } = claimDailyReward(state);
+    setState(next);
+    setShowDaily(false);
+    playCoin();
+    haptics.correct();
+  }
 
   function handleSubmit(selectedIdx: number[]) {
     if (solvedWord) return; // modal açıkken tekerlek zaten disabled ama çift tetikleme koruması
@@ -70,10 +96,13 @@ export default function App() {
     if (guess === word.word.toLowerCase()) {
       const usedHint = revealedHint > 0;
       const prevBest = state.bestStreak;
+      const prevRank = rank;
       const next = completeLevel(state, word, usedHint);
+      const newRank = rankForLevel(next.level);
       setCoinsEarned(next.coins - state.coins);
       setWasNewBest(next.bestStreak > prevBest);
       setStarsEarned(revealedHint === 0 ? 3 : revealedHint === 1 ? 2 : 1);
+      setRankUp(newRank.id !== prevRank.id ? newRank : null);
       setSolvedWord(word);
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
@@ -96,6 +125,7 @@ export default function App() {
     } catch {
       // localStorage kapalıysa her açılışta tekrar görünür -- can sıkıcı ama zararsız.
     }
+    if (canClaimDaily(state)) setShowDaily(true);
   }
 
   function handleToggleMute() {
@@ -116,11 +146,26 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${theme.bgClass} text-white flex flex-col items-center px-4 py-6 transition-colors duration-500 relative overflow-hidden`}>
+      {/* İnce noktalı doku: renkli bulanık toplar (BackgroundOrbs) tek başına
+          düz gradyanın üstünde biraz "boş" duruyordu -- bu katman derinlik
+          hissi ekliyor, tamamen dekoratif ve etkileşime kapalı. */}
+      <div
+        className="fixed inset-0 -z-10 opacity-[0.12] pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          backgroundSize: '22px 22px',
+        }}
+      />
       <BackgroundOrbs />
       <header className="w-full max-w-md flex items-center justify-between mb-5">
         <div>
           <h1 className={`font-display text-2xl font-extrabold tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
-          <p className="text-xs text-white/50">{t('tagline', lang)}</p>
+          <p className="text-xs text-white/50 mb-1.5">{t('tagline', lang)}</p>
+          <span
+            className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${rank.gradientClass} text-slate-900 text-[10px] font-display font-extrabold px-2 py-0.5`}
+          >
+            {rank.icon} {t(rank.nameKey, lang)}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <CoinBadge icon="🪙" value={state.coins} label={t('coins', lang)} />
@@ -192,6 +237,23 @@ export default function App() {
               🔁 {t('outOfWords', lang)}
             </p>
           )}
+
+          {/* Rütbe ilerleme çubuğu: bir sonraki rütbeye ne kadar kaldığını
+              gösteriyor -- lider tablosu dışarıyla kıyaslıyor, bu ise
+              kullanıcının kendi yolculuğunu somutlaştırıyor. */}
+          <div className="w-full mb-3">
+            <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className={`h-full rounded-full bg-gradient-to-r ${rank.gradientClass} transition-all duration-500`}
+                style={{ width: `${Math.round(rankProgress * 100)}%` }}
+              />
+            </div>
+            {upcomingRank && (
+              <p className="text-[10px] text-white/40 mt-1 text-right">
+                {upcomingRank.icon} {t(upcomingRank.nameKey, lang)} · {t('level', lang)} {upcomingRank.minLevel + 1}
+              </p>
+            )}
+          </div>
 
           <div className="w-full flex items-center justify-between mb-3">
             <span className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${DIFFICULTY_STYLE[difficulty]}`}>
@@ -269,6 +331,29 @@ export default function App() {
 
       {view === 'vocab' && (
         <main className="w-full max-w-md flex-1 animate-[viewFade_0.25s_ease-out]">
+          <p className="font-display text-xs font-extrabold uppercase tracking-wide text-white/50 mb-2">
+            🏅 {t('achTitle', lang)}
+          </p>
+          <div className="flex gap-2.5 overflow-x-auto pb-3 mb-4 -mx-1 px-1">
+            {ACHIEVEMENTS.map((a) => {
+              const unlocked = isUnlocked(a, state);
+              return (
+                <div key={a.id} className="flex flex-col items-center gap-1 shrink-0 w-14">
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl border ${
+                      unlocked
+                        ? `bg-gradient-to-br ${rank.gradientClass} border-white/40 shadow-md`
+                        : 'bg-white/5 border-white/10 grayscale opacity-40'
+                    }`}
+                  >
+                    {a.icon}
+                  </div>
+                  <p className="text-[9px] text-white/60 text-center leading-tight">{t(a.titleKey, lang)}</p>
+                </div>
+              );
+            })}
+          </div>
+
           {state.vocabulary.length === 0 ? (
             <p className="text-center text-white/50 text-sm mt-12">{t('emptyVocabulary', lang)}</p>
           ) : (
@@ -301,11 +386,36 @@ export default function App() {
             return (
               <div
                 key={th.id}
-                className={`rounded-2xl overflow-hidden border-2 ${active ? 'border-white' : 'border-white/10'}`}
+                className={`relative rounded-2xl overflow-hidden border-2 transition-shadow ${
+                  active ? 'border-white shadow-lg shadow-white/10' : 'border-white/10'
+                }`}
               >
-                <div className={`h-16 ${th.bgClass}`} />
+                {th.isNew && !owned && (
+                  <span className="absolute top-2 right-2 z-10 text-[9px] font-display font-extrabold bg-rose-400 text-white px-1.5 py-0.5 rounded-full shadow">
+                    {t('newBadge', lang)}
+                  </span>
+                )}
+                <div className={`h-16 ${th.bgClass} relative flex items-center justify-center gap-1.5`}>
+                  {/* Tema alınmadan önce, satın alacağı gerçek tekerlek renklerinin
+                      küçük bir önizlemesi -- soyut bir renk şeridinden çok daha
+                      "ne alıyorum" hissi veriyor. */}
+                  {['A', 'B', 'C'].map((ch) => (
+                    <span
+                      key={ch}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-display font-extrabold ${th.tileSelectedClass}`}
+                      style={{ boxShadow: '0 2px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.3)' }}
+                    >
+                      {ch}
+                    </span>
+                  ))}
+                  {!owned && (
+                    <div className="absolute inset-0 bg-slate-950/50 flex items-center justify-center">
+                      <span className="text-lg">🔒</span>
+                    </div>
+                  )}
+                </div>
                 <div className="bg-white/8 p-3">
-                  <p className="font-display font-bold text-sm">{th.name}</p>
+                  <p className="font-display font-bold text-sm">{themeName(th, lang)}</p>
                   <p className="text-[11px] text-white/50 mb-2">
                     {th.price === 0 ? t('free', lang) : `🪙 ${th.price}`}
                   </p>
@@ -335,14 +445,27 @@ export default function App() {
 
       {showOnboarding && <OnboardingOverlay lang={lang} onDismiss={dismissOnboarding} />}
 
+      {!showOnboarding && !solvedWord && showDaily && (
+        <DailyRewardModal
+          lang={lang}
+          previewAmount={dailyPreview.amount}
+          previewStreak={dailyPreview.streak}
+          onClaim={handleClaimDaily}
+        />
+      )}
+
       {solvedWord && (
         <LevelCompleteModal
           word={solvedWord}
           coinsEarned={coinsEarned}
           isNewBest={wasNewBest}
           stars={starsEarned}
+          rankUp={rankUp}
           lang={lang}
-          onContinue={() => setSolvedWord(null)}
+          onContinue={() => {
+            setSolvedWord(null);
+            setRankUp(null);
+          }}
         />
       )}
     </div>

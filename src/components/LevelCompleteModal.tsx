@@ -1,6 +1,7 @@
 import type { WordEntry } from '../lib/wordList';
 import type { Lang } from '../lib/i18n';
 import { t } from '../lib/i18n';
+import type { Rank } from '../lib/ranks';
 
 interface Props {
   word: WordEntry;
@@ -8,10 +9,12 @@ interface Props {
   isNewBest: boolean;
   stars: 1 | 2 | 3;
   lang: Lang;
+  /** Bu seviyeyi geçince yeni bir rütbeye geçildiyse -- kısa bir kutlama şeridi eklenir. */
+  rankUp?: Rank | null;
   onContinue: () => void;
 }
 
-export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars, lang, onContinue }: Props) {
+export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars, lang, rankUp, onContinue }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-[fadeIn_0.2s_ease-out]">
       <div className="w-full max-w-xs rounded-3xl bg-gradient-to-b from-violet-600 to-fuchsia-700 p-6 text-center shadow-2xl animate-[popIn_0.35s_cubic-bezier(0.34,1.56,0.64,1)]">
@@ -41,6 +44,17 @@ export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars
 
         <p className="font-display text-amber-300 font-bold mb-1">+{coinsEarned} 🪙</p>
         {isNewBest && <p className="text-xs text-emerald-300 font-semibold mb-2">🔥 {t('newBest', lang)}</p>}
+
+        {rankUp && (
+          <div
+            className={`mt-1 mb-3 rounded-xl bg-gradient-to-r ${rankUp.gradientClass} px-3 py-2 flex items-center justify-center gap-2 text-slate-900 animate-[popIn_0.4s_cubic-bezier(0.34,1.56,0.64,1)_0.2s_both]`}
+          >
+            <span className="text-xl">{rankUp.icon}</span>
+            <span className="font-display font-extrabold text-sm">
+              {t('newRank', lang)} {t(rankUp.nameKey, lang)}
+            </span>
+          </div>
+        )}
 
         <button
           onClick={onContinue}
