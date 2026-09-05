@@ -16,17 +16,27 @@ import { haptics } from '../lib/haptics';
  * ve React state'iyle tam uyumlu.
  */
 
-const SIZE = 280;
-const CENTER = SIZE / 2;
-const RADIUS = 100;
-const TILE_R = 26;
-const HIT_R = 38; // dokunma toleransı -- tile'dan biraz büyük, parmak tam üstüne gelmese de yakalasın
+/**
+ * Geometri harf sayısına göre ölçekleniyor -- sabit 280px çember, 2-3
+ * harfli bir kelimede (oyunun İLK seviyeleri tam da bu -- kelime listesi
+ * kısadan uzuna sıralı) noktaları tam çapa (180°/120° ayrı) yayıp devasa,
+ * "bozuk" görünen boş bir daire bırakıyordu (ekran görüntüsüyle doğrulandı).
+ * Az harfte küçük+sıkı bir küme, çok harfte (8-9) biraz daha büyük bir
+ * çember + daha küçük karo -- ikisi de kendi harf sayısı için "dolu"
+ * hissettiriyor, hep aynı boş çemberi germiyor.
+ */
+function wheelGeometry(count: number) {
+  if (count <= 3) return { size: 190, radius: 58, tileR: 25 };
+  if (count <= 5) return { size: 235, radius: 80, tileR: 26 };
+  if (count <= 7) return { size: 280, radius: 100, tileR: 26 };
+  return { size: 300, radius: 112, tileR: 24 };
+}
 
-function positionFor(index: number, total: number) {
+function positionFor(index: number, total: number, center: number, radius: number) {
   const angle = (index / total) * Math.PI * 2 - Math.PI / 2; // -90°'den başla (yukarı)
   return {
-    x: CENTER + RADIUS * Math.cos(angle),
-    y: CENTER + RADIUS * Math.sin(angle),
+    x: center + radius * Math.cos(angle),
+    y: center + radius * Math.sin(angle),
   };
 }
 
@@ -52,15 +62,19 @@ export default function WordWheel({
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
+  const { size, radius, tileR } = useMemo(() => wheelGeometry(letters.length), [letters.length]);
+  const center = size / 2;
+  const hitR = tileR + 12; // dokunma toleransı -- tile'dan biraz büyük, parmak tam üstüne gelmese de yakalasın
+
   const positions = useMemo(
-    () => letters.map((_, i) => positionFor(i, letters.length)),
-    [letters],
+    () => letters.map((_, i) => positionFor(i, letters.length, center, radius)),
+    [letters, center, radius],
   );
 
   const nearestLetter = useCallback(
     (x: number, y: number) => {
       let best = -1;
-      let bestDist = HIT_R;
+      let bestDist = hitR;
       positions.forEach((p, i) => {
         const d = Math.hypot(p.x - x, p.y - y);
         if (d < bestDist) {
@@ -70,12 +84,12 @@ export default function WordWheel({
       });
       return best;
     },
-    [positions],
+    [positions, hitR],
   );
 
   function localPoint(clientX: number, clientY: number) {
     const rect = containerRef.current!.getBoundingClientRect();
-    return { x: ((clientX - rect.left) / rect.width) * SIZE, y: ((clientY - rect.top) / rect.height) * SIZE };
+    return { x: ((clientX - rect.left) / rect.width) * size, y: ((clientY - rect.top) / rect.height) * size };
   }
 
   function handleDown(i: number, clientX: number, clientY: number) {
@@ -120,12 +134,12 @@ export default function WordWheel({
     <div
       ref={containerRef}
       className="relative select-none touch-none"
-      style={{ width: SIZE, height: SIZE }}
+      style={{ width: size, height: size }}
       onPointerMove={(e) => handleMove(e.clientX, e.clientY)}
       onPointerUp={handleUp}
       onPointerLeave={handleUp}
     >
-      <svg width={SIZE} height={SIZE} className="absolute inset-0 pointer-events-none">
+      <svg width={size} height={size} className="absolute inset-0 pointer-events-none">
         {linePoints.length > 1 && (
           <polyline
             points={linePoints.map((p) => `${p.x},${p.y}`).join(' ')}
@@ -157,10 +171,10 @@ export default function WordWheel({
               isSelected ? `${tileSelectedClass} scale-110` : 'bg-white text-slate-800'
             }`}
             style={{
-              width: TILE_R * 2,
-              height: TILE_R * 2,
-              left: p.x - TILE_R,
-              top: p.y - TILE_R,
+              width: tileR * 2,
+              height: tileR * 2,
+              left: p.x - tileR,
+              top: p.y - tileR,
               // "Fiziksel oyun parçası" hissi: alttan koyu bir kalınlık +
               // üstten hafif parlaklık -- düz gölge yerine gerçek bir
               // butona basıyormuş gibi hissettiriyor.

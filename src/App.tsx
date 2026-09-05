@@ -390,7 +390,7 @@ export default function App() {
                     onClick={() => handleBuyPowerup(p.kind)}
                     disabled={!affordable}
                     className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-colors active:scale-95 ${
-                      affordable ? 'bg-white/8 hover:bg-white/12 text-white/80' : 'bg-white/5 text-white/25'
+                      affordable ? 'bg-white/8 hover:bg-white/12 text-white/80' : 'bg-white/5 text-white/45'
                     }`}
                   >
                     <span className="text-sm">{p.icon}</span>
@@ -424,7 +424,7 @@ export default function App() {
                     ? 'bg-amber-400/20 text-amber-200 animate-pulse'
                     : state.coins >= CHEST_PRICE
                     ? 'bg-white/8 hover:bg-white/12 text-white/80'
-                    : 'bg-white/5 text-white/25'
+                    : 'bg-white/5 text-white/45'
                 }`}
               >
                 <span className="text-sm">{state.chestsReady > 0 ? '🎁' : '📦'}</span>
@@ -465,7 +465,12 @@ export default function App() {
               {/* Eskiden "🇹🇷 Türkçe ipucu: Açık/Kapalı" gibi uzun bir metin
                   taşıyordu -- bu geçiş tanıtımda zaten öğretiliyor, günlük
                   kullanımda sadece ikon + açık/kapalı durumu yeterli
-                  (araştırma: sık kullanılan geçişlerde metin yerine ikon). */}
+                  (araştırma: sık kullanılan geçişlerde metin yerine ikon).
+                  Bayrak emojisi (🇹🇷) YERİNE 🌐 kullanıyoruz -- ekran
+                  görüntüsüyle doğrulandı: Windows/bazı Android'lerde bayrak
+                  emojileri render edilmiyor, düz "TR" harflerine düşüyor ve
+                  bu da header'daki gerçek dil değiştirme düğmesiyle
+                  (o da bazen "TR" yazar) karıştırılıyordu. */}
               <button
                 onClick={() => setState(toggleTranslationHint(state))}
                 title={state.showTranslationHint ? t('hintToggleOn', lang) : t('hintToggleOff', lang)}
@@ -473,10 +478,10 @@ export default function App() {
                 className={`w-8 h-8 rounded-full border flex items-center justify-center text-base transition-all ${
                   state.showTranslationHint
                     ? 'bg-white/15 border-white/30'
-                    : 'bg-white/5 border-white/15 opacity-40 grayscale'
+                    : 'bg-white/5 border-white/15 opacity-50 grayscale'
                 }`}
               >
-                🇹🇷
+                🌐
               </button>
             </div>
 
@@ -635,7 +640,7 @@ export default function App() {
                     onClick={() => handleBuyPowerup(p.kind)}
                     disabled={!affordable}
                     className={`w-full py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                      affordable ? 'bg-emerald-400 text-slate-900' : 'bg-white/10 text-white/30'
+                      affordable ? 'bg-emerald-400 text-slate-900' : 'bg-white/10 text-white/45'
                     }`}
                   >
                     {affordable ? `${t('buy', lang)} · 🪙${price}` : t('notEnoughCoins', lang)}
@@ -665,7 +670,7 @@ export default function App() {
                     ? 'bg-amber-400 text-slate-900'
                     : state.coins >= CHEST_PRICE
                     ? 'bg-emerald-400 text-slate-900'
-                    : 'bg-white/10 text-white/30'
+                    : 'bg-white/10 text-white/45'
                 }`}
               >
                 {state.chestsReady > 0 ? t('chestOpenNow', lang) : `${t('buy', lang)} · 🪙${CHEST_PRICE}`}
@@ -727,7 +732,7 @@ export default function App() {
                         ? 'bg-white text-slate-900'
                         : affordable
                         ? 'bg-emerald-400 text-slate-900'
-                        : 'bg-white/10 text-white/30'
+                        : 'bg-white/10 text-white/45'
                     }`}
                   >
                     {active ? t('selected', lang) : owned ? t('select', lang) : !affordable ? t('notEnoughCoins', lang) : t('buy', lang)}
