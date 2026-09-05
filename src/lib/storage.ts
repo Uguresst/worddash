@@ -1,5 +1,4 @@
 import type { WordEntry } from './wordList';
-import { difficultyOf, type Difficulty } from './levels';
 
 /**
  * v1: "günde bir kelime" (Wordle mantığı) kullanıcıyı sınırlıyordu --
@@ -109,13 +108,13 @@ export function saveState(state: GameState): void {
 }
 
 /**
- * Kazanç artık zorluğa göre -- eskiden her kelime düz 10 jetondu, bu da
- * (liste kolaydan zora sıralı ama sonsuz döngüyle tekrar ettiği için) jetonu
- * gereğinden hızlı biriktiriyordu. Kolay kelimeler artık daha az, zor
- * kelimeler daha çok kazandırıyor -- hem "çok kolay geliyor" şikayetini
- * çözüyor hem de zorlanmayı anlamlı kılıyor.
+ * Kazanç bilerek DÜŞÜK ve zorluktan bağımsız düz bir sayı -- güçlendirmeler
+ * artık ana ekrandan doğrudan alınabildiği için (bkz. App.tsx) jetonun
+ * "değerli" hissettirmesi, birkaç doğru cevapta bir kalkan/joker alınıp
+ * bitmemesi gerekiyor. Yavaş biriken jeton daha fazla oynanış süresi
+ * demek -- bilinçli bir tercih, "kolay kazanılıyor" şikayetinin devamı.
  */
-const COINS_BY_DIFFICULTY: Record<Difficulty, number> = { easy: 5, medium: 8, hard: 13 };
+const COINS_PER_WIN = 2;
 const HINT_COIN_PENALTY_RATIO = 0.5; // ipucu kullanılırsa kazanılacak jetonun yarısı
 
 /** Bir seviyeyi kazanınca: sıradaki seviyeye geç, coin ver, kelime dağarcığına ekle. */
@@ -131,8 +130,7 @@ export function completeLevel(
     : shieldConsumed
     ? state.currentStreak
     : 0;
-  const base = COINS_BY_DIFFICULTY[difficultyOf(entry.word)];
-  const gained = Math.max(Math.round(base * (usedHint ? HINT_COIN_PENALTY_RATIO : 1)), 1);
+  const gained = Math.max(Math.round(COINS_PER_WIN * (usedHint ? HINT_COIN_PENALTY_RATIO : 1)), 1);
   const next: GameState = {
     ...state,
     level: state.level + 1,
@@ -244,6 +242,24 @@ export function buyTheme(state: GameState, themeId: string, price: number): Game
     unlockedThemes: [...state.unlockedThemes, themeId],
     activeTheme: themeId,
   };
+  saveState(next);
+  return next;
+}
+
+/**
+ * Bir kelimede art arda 2 yanlış tahmin (App.tsx'te sayılıyor) ya da
+ * ipucu kullanımı seriyi kırar -- ama Seri Kalkanı varsa hangi tetikleyici
+ * olursa olsun önce kalkanı tüketir, seri dokunulmamış kalır. Zaten 0'sa
+ * hiçbir şey yapmadan aynı state'i döner (gereksiz kayıt yok).
+ */
+export function breakStreakIfNeeded(state: GameState): GameState {
+  if (state.currentStreak === 0) return state;
+  if (state.streakShields > 0) {
+    const next = { ...state, streakShields: state.streakShields - 1 };
+    saveState(next);
+    return next;
+  }
+  const next = { ...state, currentStreak: 0 };
   saveState(next);
   return next;
 }

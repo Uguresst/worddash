@@ -23,6 +23,7 @@ import {
   claimDailyReward,
   skipLevel,
   buyPowerup,
+  breakStreakIfNeeded,
   POWERUP_PRICES,
   type GameState,
   type PowerupKind,
@@ -39,6 +40,10 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
   medium: 'bg-amber-400/15 text-amber-300 border-amber-400/40',
   hard: 'bg-rose-400/15 text-rose-300 border-rose-400/40',
 };
+
+/** Bir kelimede kaç yanlış tahminden sonra seri kırılır -- 3. yanlıştan önce
+ *  değil, TAM bu sayıya ulaşınca (bkz. handleSubmit). */
+const MAX_WRONG_ATTEMPTS = 2;
 
 const ONBOARDING_KEY = 'worddash_onboarded';
 function hasSeenOnboarding(): boolean {
@@ -57,6 +62,9 @@ export default function App() {
   // yerine memo yeterli, cunku "yeniden karistir" gibi bagimsiz bir eylem yok.
   const letters = useMemo(() => scrambleWord(word.word).split(''), [word.word]);
   const [revealedHint, setRevealedHint] = useState(0);
+  // Mevcut kelimede kac yanlis tahmin yapildi -- kalici state degil, her
+  // yeni kelimede (dogru cevap veya atlama) 0'a donuyor.
+  const [wrongAttempts, setWrongAttempts] = useState(0);
   const [feedback, setFeedback] = useState<'idle' | 'wrong'>('idle');
   const [solvedWord, setSolvedWord] = useState<WordEntry | null>(null);
   const [coinsEarned, setCoinsEarned] = useState(0);
@@ -111,11 +119,17 @@ export default function App() {
       setSolvedWord(word);
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
+      setWrongAttempts(0);
       celebrateWin();
       (next.bestStreak > prevBest ? playCelebrate : playCorrect)();
       haptics.correct();
       submitScore(next).catch((err) => console.warn('Skor gönderilemedi:', err));
     } else {
+      const attempts = wrongAttempts + 1;
+      setWrongAttempts(attempts);
+      // Ayni kelimede 2. yanlistan sonra seri kirilir -- kalkanin varsa
+      // onun yerine kalkan tuketilir (bkz. breakStreakIfNeeded).
+      if (attempts >= MAX_WRONG_ATTEMPTS) setState(breakStreakIfNeeded(state));
       setFeedback('wrong');
       setTimeout(() => setFeedback('idle'), 400);
       playWrong();
@@ -153,17 +167,21 @@ export default function App() {
     if (solvedWord || state.skipTokens <= 0) return;
     setState(skipLevel(state));
     setRevealedHint(0);
+    setWrongAttempts(0);
     setFeedback('idle');
     playTap();
     haptics.tap();
   }
 
   function handleBuyPowerup(kind: PowerupKind) {
+    if (state.coins < POWERUP_PRICES[kind]) return;
     setState(buyPowerup(state, kind));
+    playCoin();
+    haptics.tap();
   }
 
   return (
-    <div className={`min-h-screen ${theme.bgClass} text-white flex flex-col items-center px-4 py-6 transition-colors duration-500 relative overflow-hidden`}>
+    <div className={`min-h-screen ${theme.bgClass} text-white flex flex-col items-center px-4 pt-6 pb-28 transition-colors duration-500 relative overflow-hidden`}>
       {/* İnce noktalı doku: renkli bulanık toplar (BackgroundOrbs) tek başına
           düz gradyanın üstünde biraz "boş" duruyordu -- bu katman derinlik
           hissi ekliyor, tamamen dekoratif ve etkileşime kapalı. */}
@@ -187,14 +205,25 @@ export default function App() {
       />
       <BackgroundOrbs />
       <header className="w-full max-w-md flex items-center justify-between mb-5">
-        <div>
-          <h1 className={`font-display text-2xl font-extrabold tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
-          <p className="text-xs text-white/50 mb-1.5">{t('tagline', lang)}</p>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${rank.gradientClass} text-slate-900 text-[10px] font-display font-extrabold px-2 py-0.5`}
+        <div className="flex items-center gap-2.5">
+          {/* Marka rozeti: sabit koyu kare + tema rengiyle degisen ic parlaklik --
+              baslik hep ayni "W" ile eslesen, temadan bagimsiz sabit bir logo
+              gibi duruyor; sadece kenar parlamasi temayla degisiyor. */}
+          <div
+            className="w-10 h-10 rounded-2xl bg-slate-950/40 border border-white/15 flex items-center justify-center shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+            style={{ boxShadow: `0 0 16px ${theme.wheelFrom}55, inset 0 1px 0 rgba(255,255,255,0.2)` }}
           >
-            {rank.icon} {t(rank.nameKey, lang)}
-          </span>
+            <span className={`font-display text-lg font-extrabold ${theme.titleClass}`}>W</span>
+          </div>
+          <div>
+            <h1 className={`font-display text-2xl font-extrabold tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
+            <p className="text-xs text-white/50 mb-1.5">{t('tagline', lang)}</p>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${rank.gradientClass} text-slate-900 text-[10px] font-display font-extrabold px-2 py-0.5`}
+            >
+              {rank.icon} {t(rank.nameKey, lang)}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <CoinBadge icon="🪙" value={state.coins} label={t('coins', lang)} />
@@ -224,39 +253,49 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="w-full max-w-md flex gap-1.5 mb-6">
-        <button
-          onClick={() => setView('game')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
-            view === 'game' ? theme.navActiveClass : 'bg-white/10 text-white/60'
-          }`}
-        >
-          🎮 <span className="font-display">{state.level + 1}</span>
-        </button>
-        <button
-          onClick={() => setView('leaderboard')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
-            view === 'leaderboard' ? theme.navActiveClass : 'bg-white/10 text-white/60'
-          }`}
-        >
-          🏆 {t('leaderboard', lang)}
-        </button>
-        <button
-          onClick={() => setView('vocab')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
-            view === 'vocab' ? theme.navActiveClass : 'bg-white/10 text-white/60'
-          }`}
-        >
-          📖 {state.vocabulary.length}
-        </button>
-        <button
-          onClick={() => setView('shop')}
-          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
-            view === 'shop' ? theme.navActiveClass : 'bg-white/10 text-white/60'
-          }`}
-        >
-          🎨 {t('shop', lang)}
-        </button>
+      {/* Alt sekme çubuğu: eskiden başlığın hemen altında, sabit akışta duruyordu --
+          bir mobil oyunda parmağın en rahat ulaştığı yer alttır. fixed + cam
+          efekti (backdrop-blur) native bir app hissi veriyor; dış div tıklama
+          alanını yakalamasın diye pointer-events-none, iç kutu tekrar açıyor. */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <div className="w-full max-w-md flex gap-1 bg-slate-950/70 backdrop-blur-md border border-white/10 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
+          <button
+            onClick={() => setView('game')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 ${
+              view === 'game' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            <span className="text-lg leading-none">🎮</span>
+            <span className="font-display truncate max-w-full">{state.level + 1}</span>
+          </button>
+          <button
+            onClick={() => setView('leaderboard')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 ${
+              view === 'leaderboard' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            <span className="text-lg leading-none">🏆</span>
+            <span className="truncate max-w-full">{t('leaderboard', lang)}</span>
+          </button>
+          <button
+            onClick={() => setView('vocab')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 ${
+              view === 'vocab' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            <span className="text-lg leading-none">📖</span>
+            <span className="truncate max-w-full">{state.vocabulary.length}</span>
+          </button>
+          <button
+            onClick={() => setView('shop')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 ${
+              view === 'shop' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            <span className="text-lg leading-none">🎨</span>
+            <span className="truncate max-w-full">{t('shop', lang)}</span>
+          </button>
+        </div>
       </nav>
 
       {view === 'game' && (
@@ -266,6 +305,38 @@ export default function App() {
               🔁 {t('outOfWords', lang)}
             </p>
           )}
+
+          {/* Güçlendirmeleri Mağaza'ya gitmeden, ana ekrandan tek dokunuşla
+              satın alabilme -- kullanıcı ihtiyacı anında (elindeki bitince)
+              gördüğü yerden alsın diye. Aynı handleBuyPowerup'ı Mağaza'daki
+              tam kartlar da kullanıyor, mantık tek yerde. */}
+          <div className="w-full flex gap-2 mb-3">
+            {(
+              [
+                { kind: 'shield' as PowerupKind, icon: '🛡️', count: state.streakShields },
+                { kind: 'skip' as PowerupKind, icon: '🎟️', count: state.skipTokens },
+              ]
+            ).map((p) => {
+              const price = POWERUP_PRICES[p.kind];
+              const affordable = state.coins >= price;
+              return (
+                <button
+                  key={p.kind}
+                  onClick={() => handleBuyPowerup(p.kind)}
+                  disabled={!affordable}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-bold transition-colors active:scale-95 ${
+                    affordable
+                      ? 'bg-white/10 border-white/20 hover:bg-white/15 text-white'
+                      : 'bg-white/5 border-white/10 text-white/30'
+                  }`}
+                >
+                  <span className="text-base">{p.icon}</span>
+                  {p.count > 0 && <span className="text-emerald-300">×{p.count}</span>}
+                  <span className="opacity-70">🪙{price}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {/* Rütbe ilerleme çubuğu: bir sonraki rütbeye ne kadar kaldığını
               gösteriyor -- lider tablosu dışarıyla kıyaslıyor, bu ise
@@ -284,68 +355,85 @@ export default function App() {
             )}
           </div>
 
-          <div className="w-full flex items-center justify-between mb-3">
-            <span className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${DIFFICULTY_STYLE[difficulty]}`}>
-              {t(difficulty, lang)} · {word.word.length} {lang === 'tr' ? 'harf' : 'letters'}
-            </span>
-            <button
-              onClick={() => setState(toggleTranslationHint(state))}
-              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                state.showTranslationHint
-                  ? 'bg-white/15 border-white/30 text-white'
-                  : 'bg-white/5 border-white/15 text-white/40'
-              }`}
-            >
-              {state.showTranslationHint ? '🇹🇷 ' + t('hintToggleOn', lang) : '🇹🇷 ' + t('hintToggleOff', lang)}
-            </button>
-          </div>
-
-          {state.showTranslationHint && (
-            <div className="w-full text-center mb-5 animate-[popIn_0.25s_ease-out]">
-              <p className="text-[11px] text-white/50 uppercase tracking-wide">{t('translateWord', lang)}</p>
-              <p className="font-display text-3xl font-extrabold text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,0.35)]">
-                {word.tr}
-              </p>
+          {/* Bulmaca karti: zorluk/can/ipucu, ceviri, harf kutulari ve tekerlek
+              artik tek bir cam panelde -- eskiden hepsi ust uste bagimsiz
+              satirlar halinde durup ekrani "listelenmis oge yigini" gibi
+              gostreriyordu, tek kart bunlarin AYNI bulmacanin parcasi
+              oldugunu gorsel olarak da soyluyor. */}
+          <div className="w-full rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 pt-5 flex flex-col items-center shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] mb-4">
+            <div className="w-full flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${DIFFICULTY_STYLE[difficulty]}`}>
+                  {t(difficulty, lang)} · {word.word.length} {lang === 'tr' ? 'harf' : 'letters'}
+                </span>
+                {/* Canlar: bu kelimede kac yanlisin kaldigini gosteriyor --
+                    2. yanlista seri kirilir (kalkanin yoksa), bu yuzden
+                    kullanici NEDEN kirildigini burada onceden gorebiliyor. */}
+                <span className="flex gap-0.5 text-sm" title={t('livesLabel', lang)}>
+                  {Array.from({ length: MAX_WRONG_ATTEMPTS }, (_, i) => (
+                    <span key={i}>{i < MAX_WRONG_ATTEMPTS - wrongAttempts ? '❤️' : '🤍'}</span>
+                  ))}
+                </span>
+              </div>
+              <button
+                onClick={() => setState(toggleTranslationHint(state))}
+                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                  state.showTranslationHint
+                    ? 'bg-white/15 border-white/30 text-white'
+                    : 'bg-white/5 border-white/15 text-white/40'
+                }`}
+              >
+                {state.showTranslationHint ? '🇹🇷 ' + t('hintToggleOn', lang) : '🇹🇷 ' + t('hintToggleOff', lang)}
+              </button>
             </div>
-          )}
 
-          {/* Cevap şeridi: harf sayısı kadar kutu, ipucu açılanlar dolu */}
-          <div className={`flex gap-1.5 mb-8 flex-wrap justify-center ${feedback === 'wrong' ? 'animate-[shake_0.4s]' : ''}`}>
-            {word.word.split('').map((ch, i) => {
-              const isHint = i < revealedHint;
-              return (
-                <div
-                  key={i}
-                  className={`w-8 h-10 rounded-lg border-2 flex items-center justify-center font-display text-lg font-bold uppercase transition-colors ${
-                    feedback === 'wrong'
-                      ? 'border-rose-400 bg-rose-500/20 text-rose-200'
-                      : isHint
-                      ? 'border-amber-400/70 bg-amber-400/15 text-amber-300'
-                      : 'border-white/25 text-white/30'
-                  }`}
-                >
-                  {isHint ? ch : ''}
-                </div>
-              );
-            })}
-          </div>
+            {state.showTranslationHint && (
+              <div className="w-full text-center mb-5 animate-[popIn_0.25s_ease-out]">
+                <p className="text-[11px] text-white/50 uppercase tracking-wide">{t('translateWord', lang)}</p>
+                <p className="font-display text-3xl font-extrabold text-amber-300 drop-shadow-[0_0_12px_rgba(251,191,36,0.35)]">
+                  {word.tr}
+                </p>
+              </div>
+            )}
 
-          <div className="relative mb-6">
-            <div
-              className="absolute inset-0 rounded-full blur-2xl -z-10"
-              style={{
-                background: `radial-gradient(circle, ${theme.wheelFrom}55, transparent 70%)`,
-                animation: 'wheelGlow 3s ease-in-out infinite',
-              }}
-            />
-            <WordWheel
-              letters={letters}
-              onSubmit={handleSubmit}
-              disabled={Boolean(solvedWord)}
-              gradientFrom={theme.wheelFrom}
-              gradientTo={theme.wheelTo}
-              tileSelectedClass={theme.tileSelectedClass}
-            />
+            {/* Cevap şeridi: harf sayısı kadar kutu, ipucu açılanlar dolu */}
+            <div className={`flex gap-1.5 mb-6 flex-wrap justify-center ${feedback === 'wrong' ? 'animate-[shake_0.4s]' : ''}`}>
+              {word.word.split('').map((ch, i) => {
+                const isHint = i < revealedHint;
+                return (
+                  <div
+                    key={i}
+                    className={`w-8 h-10 rounded-lg border-2 flex items-center justify-center font-display text-lg font-bold uppercase transition-colors ${
+                      feedback === 'wrong'
+                        ? 'border-rose-400 bg-rose-500/20 text-rose-200'
+                        : isHint
+                        ? 'border-amber-400/70 bg-amber-400/15 text-amber-300'
+                        : 'border-white/25 text-white/30'
+                    }`}
+                  >
+                    {isHint ? ch : ''}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="relative mb-1">
+              <div
+                className="absolute inset-0 rounded-full blur-2xl -z-10"
+                style={{
+                  background: `radial-gradient(circle, ${theme.wheelFrom}55, transparent 70%)`,
+                  animation: 'wheelGlow 3s ease-in-out infinite',
+                }}
+              />
+              <WordWheel
+                letters={letters}
+                onSubmit={handleSubmit}
+                disabled={Boolean(solvedWord)}
+                gradientFrom={theme.wheelFrom}
+                gradientTo={theme.wheelTo}
+                tileSelectedClass={theme.tileSelectedClass}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
