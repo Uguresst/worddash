@@ -122,7 +122,7 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
                     ? `${navActiveClass} shadow-lg`
                     : i === 0
                     ? 'bg-amber-400/15 border border-amber-400/40'
-                    : 'bg-white/8 border border-white/10'
+                    : 'bg-white/8 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
                 }`}
               >
                 <span className="font-display font-extrabold w-6 text-center shrink-0 text-base">

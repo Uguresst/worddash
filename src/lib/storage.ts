@@ -1,4 +1,5 @@
 import type { WordEntry } from './wordList';
+import { difficultyOf, type Difficulty } from './levels';
 
 /**
  * v1: "günde bir kelime" (Wordle mantığı) kullanıcıyı sınırlıyordu --
@@ -42,6 +43,9 @@ export interface GameState {
   dailyStreak: number;
   /** Son ödülün toplandığı gün, 'YYYY-MM-DD' -- bugünle aynıysa tekrar toplanamaz. */
   lastClaimDate: string | null;
+  /** Mağazadan jetonla alınan, oyun içinde harcanan sarf malzemeleri (bkz. buyPowerup). */
+  streakShields: number; // ipucu kullanınca seriyi kırılmaktan koruyor, kullanılınca 1 azalıyor
+  skipTokens: number; // mevcut kelimeyi cezasız atlıyor
 }
 
 const DEFAULT_STATE: GameState = {
@@ -57,6 +61,8 @@ const DEFAULT_STATE: GameState = {
   totalCoinsEarned: 0,
   dailyStreak: 0,
   lastClaimDate: null,
+  streakShields: 0,
+  skipTokens: 0,
 };
 
 export function loadState(): GameState {
@@ -102,17 +108,31 @@ export function saveState(state: GameState): void {
   }
 }
 
-const COINS_PER_WIN = 10;
-const HINT_COIN_PENALTY = 3;
+/**
+ * Kazanç artık zorluğa göre -- eskiden her kelime düz 10 jetondu, bu da
+ * (liste kolaydan zora sıralı ama sonsuz döngüyle tekrar ettiği için) jetonu
+ * gereğinden hızlı biriktiriyordu. Kolay kelimeler artık daha az, zor
+ * kelimeler daha çok kazandırıyor -- hem "çok kolay geliyor" şikayetini
+ * çözüyor hem de zorlanmayı anlamlı kılıyor.
+ */
+const COINS_BY_DIFFICULTY: Record<Difficulty, number> = { easy: 5, medium: 8, hard: 13 };
+const HINT_COIN_PENALTY_RATIO = 0.5; // ipucu kullanılırsa kazanılacak jetonun yarısı
 
 /** Bir seviyeyi kazanınca: sıradaki seviyeye geç, coin ver, kelime dağarcığına ekle. */
 export function completeLevel(
   state: GameState,
   entry: WordEntry,
   usedHint: boolean,
+  /** Kalkan varsa (bkz. streakShields) ipucu kullanılmış olsa da seri KIRILMAZ, kalkan tüketilir. */
+  shieldConsumed = false,
 ): GameState {
-  const currentStreak = usedHint ? 0 : state.currentStreak + 1;
-  const gained = Math.max(COINS_PER_WIN - (usedHint ? HINT_COIN_PENALTY : 0), 1);
+  const currentStreak = !usedHint
+    ? state.currentStreak + 1
+    : shieldConsumed
+    ? state.currentStreak
+    : 0;
+  const base = COINS_BY_DIFFICULTY[difficultyOf(entry.word)];
+  const gained = Math.max(Math.round(base * (usedHint ? HINT_COIN_PENALTY_RATIO : 1)), 1);
   const next: GameState = {
     ...state,
     level: state.level + 1,
@@ -121,6 +141,34 @@ export function completeLevel(
     currentStreak,
     bestStreak: Math.max(state.bestStreak, currentStreak),
     vocabulary: [...state.vocabulary, { ...entry, learnedAt: Date.now() }],
+    streakShields: state.streakShields - (shieldConsumed ? 1 : 0),
+  };
+  saveState(next);
+  return next;
+}
+
+/** Kalkanı yoksa hiçbir şey yapmaz. Mevcut kelimeyi jeton/sözcük kazanmadan,
+ *  seriyi de bozmadan atlar -- "bu kelime imkansız" anındaki supap. */
+export function skipLevel(state: GameState): GameState {
+  if (state.skipTokens <= 0) return state;
+  const next: GameState = { ...state, level: state.level + 1, skipTokens: state.skipTokens - 1 };
+  saveState(next);
+  return next;
+}
+
+const POWERUP_PRICES = { shield: 40, skip: 25 } as const;
+export type PowerupKind = keyof typeof POWERUP_PRICES;
+export { POWERUP_PRICES };
+
+/** Yeterli jeton varsa sarf malzemesi envanterine bir tane ekler. */
+export function buyPowerup(state: GameState, kind: PowerupKind): GameState {
+  const price = POWERUP_PRICES[kind];
+  if (state.coins < price) return state;
+  const next: GameState = {
+    ...state,
+    coins: state.coins - price,
+    streakShields: state.streakShields + (kind === 'shield' ? 1 : 0),
+    skipTokens: state.skipTokens + (kind === 'skip' ? 1 : 0),
   };
   saveState(next);
   return next;

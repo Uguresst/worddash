@@ -7,7 +7,7 @@ import Leaderboard from './components/Leaderboard';
 import OnboardingOverlay from './components/OnboardingOverlay';
 import DailyRewardModal from './components/DailyRewardModal';
 import { submitScore } from './lib/leaderboard';
-import { playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
+import { playTap, playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
 import { wordForLevel, TOTAL_WORDS, difficultyOf, type Difficulty } from './lib/levels';
 import { scrambleWord } from './lib/scramble';
@@ -21,7 +21,11 @@ import {
   canClaimDaily,
   previewDailyReward,
   claimDailyReward,
+  skipLevel,
+  buyPowerup,
+  POWERUP_PRICES,
   type GameState,
+  type PowerupKind,
 } from './lib/storage';
 import { celebrateWin } from './lib/celebrate';
 import { THEMES, themeById, themeName } from './lib/themes';
@@ -95,9 +99,10 @@ export default function App() {
     const guess = selectedIdx.map((i) => letters[i]).join('').toLowerCase();
     if (guess === word.word.toLowerCase()) {
       const usedHint = revealedHint > 0;
+      const shieldConsumed = usedHint && state.streakShields > 0;
       const prevBest = state.bestStreak;
       const prevRank = rank;
-      const next = completeLevel(state, word, usedHint);
+      const next = completeLevel(state, word, usedHint, shieldConsumed);
       const newRank = rankForLevel(next.level);
       setCoinsEarned(next.coins - state.coins);
       setWasNewBest(next.bestStreak > prevBest);
@@ -144,6 +149,19 @@ export default function App() {
     setState(owned ? selectTheme(state, themeId) : buyTheme(state, themeId, price));
   }
 
+  function handleSkip() {
+    if (solvedWord || state.skipTokens <= 0) return;
+    setState(skipLevel(state));
+    setRevealedHint(0);
+    setFeedback('idle');
+    playTap();
+    haptics.tap();
+  }
+
+  function handleBuyPowerup(kind: PowerupKind) {
+    setState(buyPowerup(state, kind));
+  }
+
   return (
     <div className={`min-h-screen ${theme.bgClass} text-white flex flex-col items-center px-4 py-6 transition-colors duration-500 relative overflow-hidden`}>
       {/* İnce noktalı doku: renkli bulanık toplar (BackgroundOrbs) tek başına
@@ -154,6 +172,17 @@ export default function App() {
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
           backgroundSize: '22px 22px',
+        }}
+      />
+      {/* Temanin gercek renkleriyle (wheelFrom/wheelTo) cizilen, yavasca
+          surunen iki isik lekesi -- tema degisince rengi de degisiyor,
+          BackgroundOrbs'un sabit mor/pembe tonlarindan farkli olarak
+          o an secili temayla gorsel olarak butunlesiyor. */}
+      <div
+        className="fixed inset-0 -z-10 opacity-30 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse 60% 50% at 25% 15%, ${theme.wheelFrom}, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 85%, ${theme.wheelTo}, transparent 60%)`,
+          animation: 'themeDrift 9s ease-in-out infinite',
         }}
       />
       <BackgroundOrbs />
@@ -319,13 +348,28 @@ export default function App() {
             />
           </div>
 
-          <button
-            onClick={revealHint}
-            disabled={revealedHint >= word.word.length - 1}
-            className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-semibold disabled:opacity-30"
-          >
-            💡 {t('hint', lang)}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={revealHint}
+              disabled={revealedHint >= word.word.length - 1}
+              className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-semibold disabled:opacity-30"
+            >
+              💡 {t('hint', lang)}
+              {state.streakShields > 0 && (
+                <span className="ml-1.5 text-[10px] text-emerald-300" title={t('shieldReady', lang)}>
+                  🛡️{state.streakShields}
+                </span>
+              )}
+            </button>
+            {state.skipTokens > 0 && (
+              <button
+                onClick={handleSkip}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-semibold flex items-center gap-1"
+              >
+                🎟️ {state.skipTokens}
+              </button>
+            )}
+          </div>
         </main>
       )}
 
@@ -361,7 +405,7 @@ export default function App() {
               {[...state.vocabulary].reverse().map((v, i) => (
                 <li
                   key={`${v.word}-${i}`}
-                  className="flex items-center justify-between bg-white/8 border border-white/10 rounded-xl px-4 py-3"
+                  className="flex items-center justify-between bg-white/8 border border-white/10 rounded-xl px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
                 >
                   <div>
                     <p className="font-bold uppercase text-amber-300">{v.word}</p>
@@ -378,7 +422,52 @@ export default function App() {
       )}
 
       {view === 'shop' && (
-        <main className="w-full max-w-md flex-1 grid grid-cols-2 gap-3 animate-[viewFade_0.25s_ease-out]">
+        <main className="w-full max-w-md flex-1 animate-[viewFade_0.25s_ease-out]">
+          <p className="font-display text-xs font-extrabold uppercase tracking-wide text-white/50 mb-2">
+            ⚡ {t('powerupsTitle', lang)}
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            {(
+              [
+                { kind: 'shield' as PowerupKind, icon: '🛡️', name: t('streakShieldName', lang), desc: t('streakShieldDesc', lang), count: state.streakShields },
+                { kind: 'skip' as PowerupKind, icon: '🎟️', name: t('skipJokerName', lang), desc: t('skipJokerDesc', lang), count: state.skipTokens },
+              ]
+            ).map((p) => {
+              const price = POWERUP_PRICES[p.kind];
+              const affordable = state.coins >= price;
+              return (
+                <div
+                  key={p.kind}
+                  className="rounded-2xl border border-white/10 bg-white/8 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-2xl">{p.icon}</span>
+                    {p.count > 0 && (
+                      <span className="text-[10px] font-display font-extrabold bg-white/15 rounded-full px-2 py-0.5">
+                        {t('owned', lang)} {p.count}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-display font-bold text-sm">{p.name}</p>
+                  <p className="text-[10px] text-white/50 mb-2 leading-tight">{p.desc}</p>
+                  <button
+                    onClick={() => handleBuyPowerup(p.kind)}
+                    disabled={!affordable}
+                    className={`w-full py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                      affordable ? 'bg-emerald-400 text-slate-900' : 'bg-white/10 text-white/30'
+                    }`}
+                  >
+                    {affordable ? `${t('buy', lang)} · 🪙${price}` : t('notEnoughCoins', lang)}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="font-display text-xs font-extrabold uppercase tracking-wide text-white/50 mb-2">
+            🎨 {t('themesTitle', lang)}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
           {THEMES.map((th) => {
             const owned = state.unlockedThemes.includes(th.id);
             const active = state.activeTheme === th.id;
@@ -438,6 +527,7 @@ export default function App() {
               </div>
             );
           })}
+          </div>
         </main>
       )}
 
