@@ -3,6 +3,8 @@ import WordWheel from './components/WordWheel';
 import CoinBadge from './components/CoinBadge';
 import LevelCompleteModal from './components/LevelCompleteModal';
 import BackgroundOrbs from './components/BackgroundOrbs';
+import Leaderboard from './components/Leaderboard';
+import { submitScore } from './lib/leaderboard';
 import { wordForLevel, TOTAL_WORDS, difficultyOf, type Difficulty } from './lib/levels';
 import { scrambleWord } from './lib/scramble';
 import {
@@ -27,7 +29,7 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
 
 export default function App() {
   const [state, setState] = useState<GameState>(() => loadState());
-  const [view, setView] = useState<'game' | 'vocab' | 'shop'>('game');
+  const [view, setView] = useState<'game' | 'vocab' | 'shop' | 'leaderboard'>('game');
   const word = useMemo(() => wordForLevel(state.level), [state.level]);
   // Harfler dogrudan kelimeden turetiliyor -- ayri bir state+effect cifti
   // yerine memo yeterli, cunku "yeniden karistir" gibi bagimsiz bir eylem yok.
@@ -62,6 +64,7 @@ export default function App() {
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
       celebrateWin();
+      submitScore(next).catch((err) => console.warn('Skor gönderilemedi:', err));
     } else {
       setFeedback('wrong');
       setTimeout(() => setFeedback('idle'), 400);
@@ -108,26 +111,34 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="w-full max-w-md flex gap-2 mb-6">
+      <nav className="w-full max-w-md flex gap-1.5 mb-6">
         <button
           onClick={() => setView('game')}
-          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
             view === 'game' ? theme.navActiveClass : 'bg-white/10 text-white/60'
           }`}
         >
-          🎮 <span className="font-display">{t('level', lang)} {state.level + 1}</span>
+          🎮 <span className="font-display">{state.level + 1}</span>
+        </button>
+        <button
+          onClick={() => setView('leaderboard')}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
+            view === 'leaderboard' ? theme.navActiveClass : 'bg-white/10 text-white/60'
+          }`}
+        >
+          🏆 {t('leaderboard', lang)}
         </button>
         <button
           onClick={() => setView('vocab')}
-          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
             view === 'vocab' ? theme.navActiveClass : 'bg-white/10 text-white/60'
           }`}
         >
-          📖 {t('myVocabulary', lang)} ({state.vocabulary.length})
+          📖 {state.vocabulary.length}
         </button>
         <button
           onClick={() => setView('shop')}
-          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors truncate px-1 ${
             view === 'shop' ? theme.navActiveClass : 'bg-white/10 text-white/60'
           }`}
         >
@@ -280,6 +291,8 @@ export default function App() {
           })}
         </main>
       )}
+
+      {view === 'leaderboard' && <Leaderboard state={state} lang={lang} navActiveClass={theme.navActiveClass} />}
 
       {solvedWord && (
         <LevelCompleteModal
