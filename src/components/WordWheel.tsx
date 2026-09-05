@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { playTap } from '../lib/sound';
+import { haptics } from '../lib/haptics';
 
 /**
  * Wordscapes/Word Cookies tarzı daire harf tekerleği: harfler bir çember
@@ -81,6 +83,8 @@ export default function WordWheel({
     draggingRef.current = true;
     setSelected([i]);
     setDragPos(localPoint(clientX, clientY));
+    playTap();
+    haptics.tap();
   }
 
   function handleMove(clientX: number, clientY: number) {
@@ -94,6 +98,10 @@ export default function WordWheel({
       // Bir önceki harfe geri gelindiyse son harfi çıkar -- kaldırmadan düzeltme.
       if (sel.length > 1 && sel[sel.length - 2] === hit) return sel.slice(0, -1);
       if (sel.includes(hit)) return sel;
+      // Yalnizca gercekten YENI bir harf eklenirken tik sesi -- geri
+      // donusler veya ayni harfte kalma sessiz.
+      playTap();
+      haptics.tap();
       return [...sel, hit];
     });
   }

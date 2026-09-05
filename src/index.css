@@ -65,3 +65,18 @@ body {
   60% { opacity: 1; transform: scale(1.3) rotate(10deg); }
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
+
+/* Tanitim ekranindaki parmak ikonunun harften harfe gezdigini gosteren
+   demo -- gercek surukleme jestini SAF CSS ile taklit ediyor. */
+@keyframes tutorialSwipe {
+  0%, 10% { transform: translate(0, 0) scale(1); }
+  35% { transform: translate(64px, -4px) scale(0.9); }
+  65% { transform: translate(128px, 0) scale(1); }
+  90%, 100% { transform: translate(128px, 0) scale(0.9); }
+}
+
+/* Sekmeler arasi gecis -- ani "atlama" yerine yumusak bir belirme/kayma. */
+@keyframes viewFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

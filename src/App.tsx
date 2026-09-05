@@ -4,7 +4,10 @@ import CoinBadge from './components/CoinBadge';
 import LevelCompleteModal from './components/LevelCompleteModal';
 import BackgroundOrbs from './components/BackgroundOrbs';
 import Leaderboard from './components/Leaderboard';
+import OnboardingOverlay from './components/OnboardingOverlay';
 import { submitScore } from './lib/leaderboard';
+import { playCorrect, playWrong, playCelebrate, isMuted, toggleMuted } from './lib/sound';
+import { haptics } from './lib/haptics';
 import { wordForLevel, TOTAL_WORDS, difficultyOf, type Difficulty } from './lib/levels';
 import { scrambleWord } from './lib/scramble';
 import {
@@ -27,6 +30,15 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
   hard: 'bg-rose-400/15 text-rose-300 border-rose-400/40',
 };
 
+const ONBOARDING_KEY = 'worddash_onboarded';
+function hasSeenOnboarding(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_KEY) === '1';
+  } catch {
+    return true; // localStorage yoksa her seferinde göstermektense hiç gösterme
+  }
+}
+
 export default function App() {
   const [state, setState] = useState<GameState>(() => loadState());
   const [view, setView] = useState<'game' | 'vocab' | 'shop' | 'leaderboard'>('game');
@@ -40,6 +52,8 @@ export default function App() {
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [wasNewBest, setWasNewBest] = useState(false);
   const [starsEarned, setStarsEarned] = useState<1 | 2 | 3>(3);
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenOnboarding());
+  const [muted, setMuted] = useState(() => isMuted());
 
   const lang = state.lang;
   const theme = themeById(state.activeTheme);
@@ -64,11 +78,28 @@ export default function App() {
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
       celebrateWin();
+      (next.bestStreak > prevBest ? playCelebrate : playCorrect)();
+      haptics.correct();
       submitScore(next).catch((err) => console.warn('Skor gönderilemedi:', err));
     } else {
       setFeedback('wrong');
       setTimeout(() => setFeedback('idle'), 400);
+      playWrong();
+      haptics.wrong();
     }
+  }
+
+  function dismissOnboarding() {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem(ONBOARDING_KEY, '1');
+    } catch {
+      // localStorage kapalıysa her açılışta tekrar görünür -- can sıkıcı ama zararsız.
+    }
+  }
+
+  function handleToggleMute() {
+    setMuted(toggleMuted());
   }
 
   function revealHint() {
@@ -94,6 +125,14 @@ export default function App() {
         <div className="flex items-center gap-3">
           <CoinBadge icon="🪙" value={state.coins} label={t('coins', lang)} />
           <CoinBadge icon="🔥" value={state.currentStreak} label={t('streak', lang)} hot={state.currentStreak >= 3} />
+          <button
+            onClick={handleToggleMute}
+            title={muted ? t('soundOff', lang) : t('soundOn', lang)}
+            aria-label={muted ? t('soundOff', lang) : t('soundOn', lang)}
+            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-sm shrink-0"
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
           <div className="flex rounded-lg overflow-hidden border border-white/20 text-xs font-bold">
             <button
               onClick={() => changeLang('tr')}
@@ -147,7 +186,7 @@ export default function App() {
       </nav>
 
       {view === 'game' && (
-        <main className="w-full max-w-md flex-1 flex flex-col items-center">
+        <main className="w-full max-w-md flex-1 flex flex-col items-center animate-[viewFade_0.25s_ease-out]">
           {justLooped && (
             <p className="text-[11px] text-amber-300/90 bg-amber-400/10 border border-amber-400/30 rounded-full px-3 py-1 mb-4 text-center">
               🔁 {t('outOfWords', lang)}
@@ -229,7 +268,7 @@ export default function App() {
       )}
 
       {view === 'vocab' && (
-        <main className="w-full max-w-md flex-1">
+        <main className="w-full max-w-md flex-1 animate-[viewFade_0.25s_ease-out]">
           {state.vocabulary.length === 0 ? (
             <p className="text-center text-white/50 text-sm mt-12">{t('emptyVocabulary', lang)}</p>
           ) : (
@@ -254,7 +293,7 @@ export default function App() {
       )}
 
       {view === 'shop' && (
-        <main className="w-full max-w-md flex-1 grid grid-cols-2 gap-3">
+        <main className="w-full max-w-md flex-1 grid grid-cols-2 gap-3 animate-[viewFade_0.25s_ease-out]">
           {THEMES.map((th) => {
             const owned = state.unlockedThemes.includes(th.id);
             const active = state.activeTheme === th.id;
@@ -293,6 +332,8 @@ export default function App() {
       )}
 
       {view === 'leaderboard' && <Leaderboard state={state} lang={lang} navActiveClass={theme.navActiveClass} />}
+
+      {showOnboarding && <OnboardingOverlay lang={lang} onDismiss={dismissOnboarding} />}
 
       {solvedWord && (
         <LevelCompleteModal

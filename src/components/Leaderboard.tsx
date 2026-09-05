@@ -64,7 +64,7 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
 
   if (!nickname) {
     return (
-      <div className="w-full max-w-md flex-1 flex flex-col items-center justify-center text-center px-4">
+      <div className="w-full max-w-md flex-1 flex flex-col items-center justify-center text-center px-4 animate-[viewFade_0.25s_ease-out]">
         <p className="text-5xl mb-3">🏆</p>
         <p className="text-sm text-white/70 mb-4">{t('nicknamePrompt', lang)}</p>
         <div className="w-full flex gap-2">
@@ -90,10 +90,21 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
   }
 
   return (
-    <div className="w-full max-w-md flex-1">
+    <div className="w-full max-w-md flex-1 animate-[viewFade_0.25s_ease-out]">
       <h2 className="font-display text-lg font-extrabold text-center mb-3">{t('leaderboardTitle', lang)}</h2>
       {loading ? (
-        <p className="text-center text-white/50 text-sm mt-8">{t('loadingLeaderboard', lang)}</p>
+        // Duz "yukleniyor" yazisi yerine iskelet satirlar -- listenin
+        // hangi seklde geleceginin bir on izlenimini veriyor, bosluk
+        // birden dolmuyor.
+        <ol className="space-y-1.5">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <li key={i} className="flex items-center gap-3 rounded-xl px-3 py-2.5 bg-white/5 animate-pulse">
+              <span className="w-6 h-4 rounded bg-white/10 shrink-0" />
+              <span className="flex-1 h-4 rounded bg-white/10" style={{ maxWidth: `${70 - i * 8}%` }} />
+              <span className="w-12 h-4 rounded bg-white/10 shrink-0" />
+            </li>
+          ))}
+        </ol>
       ) : rows.length === 0 ? (
         <p className="text-center text-white/50 text-sm mt-8">{t('noScoresYet', lang)}</p>
       ) : (
