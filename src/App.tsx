@@ -238,28 +238,27 @@ export default function App() {
         }}
       />
       <BackgroundOrbs />
-      <header className="w-full max-w-md flex items-center justify-between mb-5">
+      {/* Header sadeleştirildi: eskiden marka + slogan + rütbe rozeti SOLDA,
+          jeton + seri + ses + dil SAĞDA -- tek satırda 8 farklı öge
+          yarışıyordu. Araştırma (Wordscapes/Candy Crush/Duolingo HUD'ları)
+          hep aynı şeyi söylüyor: HUD'da o an gerekmeyen hiçbir şey durmasın.
+          Slogan kaldırıldı (görev bir kere öğretiliyor, sonra gereksiz),
+          rütbe kendi şeridine taşındı (bkz. hemen altı) -- header artık
+          sadece marka + canlı sayaçlar. */}
+      <header className="w-full max-w-md flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5">
           {/* Marka rozeti: sabit koyu kare + tema rengiyle degisen ic parlaklik --
               baslik hep ayni "W" ile eslesen, temadan bagimsiz sabit bir logo
               gibi duruyor; sadece kenar parlamasi temayla degisiyor. */}
           <div
-            className="w-10 h-10 rounded-2xl bg-slate-950/40 border border-white/15 flex items-center justify-center shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+            className="w-9 h-9 rounded-xl bg-slate-950/40 border border-white/15 flex items-center justify-center shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
             style={{ boxShadow: `0 0 16px ${theme.wheelFrom}55, inset 0 1px 0 rgba(255,255,255,0.2)` }}
           >
-            <span className={`font-display text-lg font-extrabold ${theme.titleClass}`}>W</span>
+            <span className={`font-display text-base font-extrabold ${theme.titleClass}`}>W</span>
           </div>
-          <div>
-            <h1 className={`font-display text-2xl font-extrabold tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
-            <p className="text-xs text-white/50 mb-1.5">{t('tagline', lang)}</p>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${rank.gradientClass} text-slate-900 text-[10px] font-display font-extrabold px-2 py-0.5`}
-            >
-              {rank.icon} {t(rank.nameKey, lang)}
-            </span>
-          </div>
+          <h1 className={`font-display text-xl font-extrabold tracking-tight ${theme.titleClass}`}>{t('title', lang)}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <CoinBadge icon="🪙" value={state.coins} label={t('coins', lang)} />
           <CoinBadge
             icon="🔥"
@@ -269,30 +268,51 @@ export default function App() {
             suffix={multiplier > 1 ? `×${multiplier}` : undefined}
             suffixTitle={t('streakMultiplierInfo', lang)}
           />
-          <button
-            onClick={handleToggleMute}
-            title={muted ? t('soundOff', lang) : t('soundOn', lang)}
-            aria-label={muted ? t('soundOff', lang) : t('soundOn', lang)}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-sm shrink-0"
-          >
-            {muted ? '🔇' : '🔊'}
-          </button>
-          <div className="flex rounded-lg overflow-hidden border border-white/20 text-xs font-bold">
+          {/* Ses + dil artık tek, daha sessiz bir küme -- her saniye bakılan
+              jeton/seri sayaçlarıyla aynı görsel ağırlıkta durmamalı. */}
+          <div className="flex items-center gap-1 opacity-70">
             <button
-              onClick={() => changeLang('tr')}
-              className={`px-2 py-1 ${lang === 'tr' ? theme.navActiveClass : 'bg-white/10 text-white/60'}`}
+              onClick={handleToggleMute}
+              title={muted ? t('soundOff', lang) : t('soundOn', lang)}
+              aria-label={muted ? t('soundOff', lang) : t('soundOn', lang)}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-xs shrink-0"
             >
-              TR
+              {muted ? '🔇' : '🔊'}
             </button>
             <button
-              onClick={() => changeLang('en')}
-              className={`px-2 py-1 ${lang === 'en' ? theme.navActiveClass : 'bg-white/10 text-white/60'}`}
+              onClick={() => changeLang(lang === 'tr' ? 'en' : 'tr')}
+              title={lang === 'tr' ? 'English' : 'Türkçe'}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/15 flex items-center justify-center text-[10px] font-bold shrink-0"
             >
-              EN
+              {lang === 'tr' ? 'EN' : 'TR'}
             </button>
           </div>
         </div>
       </header>
+
+      {/* Rütbe şeridi: ikon + isim + ince ilerleme çubuğu + sıradaki rütbe,
+          tek satırda -- eskiden header'daki bir rozet + oyun sekmesinde
+          ayrı bir tam-genişlik blok olarak İKİ yerde tekrarlanıyordu. Tüm
+          sekmelerde (sadece oyunda değil) görünüyor: rütbe hesap-geneli bir
+          durum, coin/seri gibi her an bilinmesi gereken bir şey. */}
+      <div className="w-full max-w-md flex items-center gap-2 mb-4">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${rank.gradientClass} text-slate-900 text-[10px] font-display font-extrabold px-2 py-0.5 shrink-0`}
+        >
+          {rank.icon} {t(rank.nameKey, lang)}
+        </span>
+        <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className={`h-full rounded-full bg-gradient-to-r ${rank.gradientClass} transition-all duration-500`}
+            style={{ width: `${Math.round(rankProgress * 100)}%` }}
+          />
+        </div>
+        {upcomingRank && (
+          <span className="text-[10px] text-white/40 shrink-0">
+            {upcomingRank.icon} {t('level', lang)} {upcomingRank.minLevel + 1}
+          </span>
+        )}
+      </div>
 
       {/* Alt sekme çubuğu: eskiden başlığın hemen altında, sabit akışta duruyordu --
           bir mobil oyunda parmağın en rahat ulaştığı yer alttır. fixed + cam
@@ -350,10 +370,12 @@ export default function App() {
           {/* Güçlendirmeleri Mağaza'ya gitmeden, ana ekrandan tek dokunuşla
               satın alabilme -- kullanıcı ihtiyacı anında (elindeki bitince)
               gördüğü yerden alsın diye. Aynı handleBuyPowerup'ı Mağaza'daki
-              tam kartlar da kullanıyor, mantık tek yerde. Info baloncuğu
-              AYRI bir <button>: satın alma butonunun İÇİNE gömülü olsaydı
-              tarayıcı iç içe <button> render edemezdi. */}
-          <div className="w-full flex gap-2 mb-3">
+              tam kartlar da kullanıyor, mantık tek yerde. Bilerek İNCE ve
+              az-vurgulu (kalın kutu/kenarlık yok) -- bulmaca kartı burada
+              görsel odak olmalı, bu şerit onun gölgesinde bir kısayol.
+              Info baloncuğu AYRI bir <button>: satın alma butonunun İÇİNE
+              gömülü olsaydı tarayıcı iç içe <button> render edemezdi. */}
+          <div className="w-full flex items-center gap-3 mb-3 px-1">
             {(
               [
                 { kind: 'shield' as PowerupKind, icon: '🛡️', count: state.streakShields, info: t('streakShieldInfo', lang) },
@@ -363,30 +385,32 @@ export default function App() {
               const price = POWERUP_PRICES[p.kind];
               const affordable = state.coins >= price;
               return (
-                <div key={p.kind} className="relative flex-1">
+                <div key={p.kind} className="relative flex items-center">
                   <button
                     onClick={() => handleBuyPowerup(p.kind)}
                     disabled={!affordable}
-                    className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-bold transition-colors active:scale-95 ${
-                      affordable
-                        ? 'bg-white/10 border-white/20 hover:bg-white/15 text-white'
-                        : 'bg-white/5 border-white/10 text-white/30'
+                    className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-colors active:scale-95 ${
+                      affordable ? 'bg-white/8 hover:bg-white/12 text-white/80' : 'bg-white/5 text-white/25'
                     }`}
                   >
-                    <span className="text-base">{p.icon}</span>
+                    <span className="text-sm">{p.icon}</span>
                     {p.count > 0 && <span className="text-emerald-300">×{p.count}</span>}
-                    <span className="opacity-70">🪙{price}</span>
+                    <span className="opacity-60">🪙{price}</span>
                   </button>
-                  <div className="absolute -top-1.5 -right-1.5">
+                  <div className="absolute -top-1 -right-1">
                     <InfoTooltip text={p.info} />
                   </div>
                 </div>
               );
             })}
 
+            <div className="flex-1" />
+
             {/* Sandık: ücretsiz ilerlemesi (5 doğru cevapta 1) veya jetonla
-                anında satın alma -- iki farklı durumu TEK butonda gösteriyor. */}
-            <div className="relative flex-1">
+                anında satın alma -- iki farklı durumu TEK butonda gösteriyor.
+                Diğer ikisinden ayrı durması için hazır olunca amber vurgusu
+                korunuyor -- bu tek istisna kasıtlı, "burada büyük bir şey var". */}
+            <div className="relative flex items-center">
               <button
                 onClick={handleChestTap}
                 title={
@@ -395,44 +419,27 @@ export default function App() {
                     : `${state.chestProgress}/${CHEST_WIN_TARGET} ${t('chestProgress', lang)}`
                 }
                 disabled={state.chestsReady === 0 && state.coins < CHEST_PRICE}
-                className={`w-full flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-bold transition-colors active:scale-95 ${
+                className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px] font-bold transition-colors active:scale-95 ${
                   state.chestsReady > 0
-                    ? 'bg-amber-400/20 border-amber-400/50 text-amber-200 animate-pulse'
+                    ? 'bg-amber-400/20 text-amber-200 animate-pulse'
                     : state.coins >= CHEST_PRICE
-                    ? 'bg-white/10 border-white/20 hover:bg-white/15 text-white'
-                    : 'bg-white/5 border-white/10 text-white/30'
+                    ? 'bg-white/8 hover:bg-white/12 text-white/80'
+                    : 'bg-white/5 text-white/25'
                 }`}
               >
-                <span className="text-base">{state.chestsReady > 0 ? '🎁' : '📦'}</span>
+                <span className="text-sm">{state.chestsReady > 0 ? '🎁' : '📦'}</span>
                 {state.chestsReady > 0 ? (
                   <span className="truncate">{t('chestOpenNow', lang)}</span>
                 ) : (
-                  <span className="opacity-70 truncate">
+                  <span className="opacity-60 truncate">
                     {state.chestProgress}/{CHEST_WIN_TARGET}
                   </span>
                 )}
               </button>
-              <div className="absolute -top-1.5 -right-1.5">
+              <div className="absolute -top-1 -right-1">
                 <InfoTooltip text={t('chestInfo', lang)} />
               </div>
             </div>
-          </div>
-
-          {/* Rütbe ilerleme çubuğu: bir sonraki rütbeye ne kadar kaldığını
-              gösteriyor -- lider tablosu dışarıyla kıyaslıyor, bu ise
-              kullanıcının kendi yolculuğunu somutlaştırıyor. */}
-          <div className="w-full mb-3">
-            <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div
-                className={`h-full rounded-full bg-gradient-to-r ${rank.gradientClass} transition-all duration-500`}
-                style={{ width: `${Math.round(rankProgress * 100)}%` }}
-              />
-            </div>
-            {upcomingRank && (
-              <p className="text-[10px] text-white/40 mt-1 text-right">
-                {upcomingRank.icon} {t(upcomingRank.nameKey, lang)} · {t('level', lang)} {upcomingRank.minLevel + 1}
-              </p>
-            )}
           </div>
 
           {/* Bulmaca karti: zorluk/can/ipucu, ceviri, harf kutulari ve tekerlek
@@ -455,15 +462,21 @@ export default function App() {
                   ))}
                 </span>
               </div>
+              {/* Eskiden "🇹🇷 Türkçe ipucu: Açık/Kapalı" gibi uzun bir metin
+                  taşıyordu -- bu geçiş tanıtımda zaten öğretiliyor, günlük
+                  kullanımda sadece ikon + açık/kapalı durumu yeterli
+                  (araştırma: sık kullanılan geçişlerde metin yerine ikon). */}
               <button
                 onClick={() => setState(toggleTranslationHint(state))}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
+                title={state.showTranslationHint ? t('hintToggleOn', lang) : t('hintToggleOff', lang)}
+                aria-label={state.showTranslationHint ? t('hintToggleOn', lang) : t('hintToggleOff', lang)}
+                className={`w-8 h-8 rounded-full border flex items-center justify-center text-base transition-all ${
                   state.showTranslationHint
-                    ? 'bg-white/15 border-white/30 text-white'
-                    : 'bg-white/5 border-white/15 text-white/40'
+                    ? 'bg-white/15 border-white/30'
+                    : 'bg-white/5 border-white/15 opacity-40 grayscale'
                 }`}
               >
-                {state.showTranslationHint ? '🇹🇷 ' + t('hintToggleOn', lang) : '🇹🇷 ' + t('hintToggleOff', lang)}
+                🇹🇷
               </button>
             </div>
 
