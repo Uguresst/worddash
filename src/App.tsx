@@ -8,10 +8,18 @@ import OnboardingOverlay from './components/OnboardingOverlay';
 import DailyRewardModal from './components/DailyRewardModal';
 import ChestModal from './components/ChestModal';
 import InfoTooltip from './components/InfoTooltip';
+import PackMap from './components/PackMap';
 import { submitScore } from './lib/leaderboard';
 import { playTap, playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
-import { wordForLevel, TOTAL_WORDS, difficultyOf, type Difficulty } from './lib/levels';
+import {
+  wordForLevel,
+  TOTAL_WORDS,
+  difficultyOf,
+  packForLevel,
+  completesPack,
+  type Difficulty,
+} from './lib/levels';
 import { scrambleWord } from './lib/scramble';
 import {
   loadState,
@@ -41,7 +49,7 @@ import { THEMES, themeById, themeName } from './lib/themes';
 import { rankForLevel, nextRank, type Rank } from './lib/ranks';
 import { ACHIEVEMENTS, isUnlocked } from './lib/achievements';
 import { t } from './lib/i18n';
-import type { WordEntry } from './lib/wordList';
+import type { WordEntry, WordPack } from './lib/wordPacks';
 
 const DIFFICULTY_STYLE: Record<Difficulty, string> = {
   easy: 'bg-emerald-400/15 text-emerald-300 border-emerald-400/40',
@@ -64,7 +72,7 @@ function hasSeenOnboarding(): boolean {
 
 export default function App() {
   const [state, setState] = useState<GameState>(() => loadState());
-  const [view, setView] = useState<'game' | 'vocab' | 'shop' | 'leaderboard'>('game');
+  const [view, setView] = useState<'game' | 'packs' | 'vocab' | 'shop' | 'leaderboard'>('game');
   const word = useMemo(() => wordForLevel(state.level), [state.level]);
   // Harfler dogrudan kelimeden turetiliyor -- ayri bir state+effect cifti
   // yerine memo yeterli, cunku "yeniden karistir" gibi bagimsiz bir eylem yok.
@@ -86,12 +94,16 @@ export default function App() {
   // içinden güncellemek, gereksiz render zincirini önlüyor.
   const [showDaily, setShowDaily] = useState(() => hasSeenOnboarding() && canClaimDaily(state));
   const [rankUp, setRankUp] = useState<Rank | null>(null);
+  // Bu kelime bir paketi bitirdiyse hangi paket -- LevelCompleteModal'daki
+  // kutlama şeridi için, bir sonraki kelimede temizleniyor.
+  const [packDone, setPackDone] = useState<WordPack | null>(null);
   const [showChest, setShowChest] = useState(false);
 
   const lang = state.lang;
   const theme = themeById(state.activeTheme);
   const justLooped = state.level > 0 && state.level % TOTAL_WORDS === 0;
   const difficulty = difficultyOf(word.word);
+  const here = packForLevel(state.level);
   const rank = rankForLevel(state.level);
   const upcomingRank = nextRank(state.level);
   const rankProgress = upcomingRank
@@ -120,12 +132,14 @@ export default function App() {
       const shieldConsumed = usedHint && state.streakShields > 0;
       const prevBest = state.bestStreak;
       const prevRank = rank;
-      const next = completeLevel(state, word, usedHint, shieldConsumed);
+      const finishedPack = completesPack(state.level);
+      const next = completeLevel(state, word, usedHint, shieldConsumed, finishedPack !== null);
       const newRank = rankForLevel(next.level);
       setCoinsEarned(next.coins - state.coins);
       setWasNewBest(next.bestStreak > prevBest);
       setStarsEarned(revealedHint === 0 ? 3 : revealedHint === 1 ? 2 : 1);
       setRankUp(newRank.id !== prevRank.id ? newRank : null);
+      setPackDone(finishedPack);
       setSolvedWord(word);
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
@@ -330,6 +344,15 @@ export default function App() {
             <span className="font-display truncate max-w-full">{state.level + 1}</span>
           </button>
           <button
+            onClick={() => setView('packs')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 ${
+              view === 'packs' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
+            }`}
+          >
+            <span className="text-lg leading-none">🗺️</span>
+            <span className="truncate max-w-full">{t('packs', lang)}</span>
+          </button>
+          <button
             onClick={() => setView('leaderboard')}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[10px] font-bold transition-all duration-200 ${
               view === 'leaderboard' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
@@ -366,6 +389,31 @@ export default function App() {
               🔁 {t('outOfWords', lang)}
             </p>
           )}
+
+          {/* Paket şeridi: oyuncu her an HANGİ konuda olduğunu ve o konunun
+              neresinde olduğunu görüyor. Tek başına duran "Seviye 247" sayısı
+              bir hedef sunmuyordu; "Teknoloji 14/69" hem yer bildiriyor hem
+              bitirilecek somut bir şey gösteriyor. Dokununca haritayı açar. */}
+          <button
+            onClick={() => { setView('packs'); playTap(); }}
+            className="w-full mb-3 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 flex items-center gap-3 active:scale-[0.98] transition-transform"
+          >
+            <span className="text-xl leading-none">{here.pack.icon}</span>
+            <span className="flex-1 min-w-0 text-left">
+              <span className="block font-display text-[13px] font-bold truncate">
+                {lang === 'en' ? here.pack.nameEn : here.pack.name}
+              </span>
+              <span className="mt-1 block h-1 rounded-full bg-white/10 overflow-hidden">
+                <span
+                  className="block h-full rounded-full bg-white/70 transition-[width] duration-500"
+                  style={{ width: `${(here.indexInPack / here.packSize) * 100}%` }}
+                />
+              </span>
+            </span>
+            <span className="text-[11px] font-bold tabular-nums text-white/70 shrink-0">
+              {here.indexInPack}/{here.packSize}
+            </span>
+          </button>
 
           {/* Güçlendirmeleri Mağaza'ya gitmeden, ana ekrandan tek dokunuşla
               satın alabilme -- kullanıcı ihtiyacı anında (elindeki bitince)
@@ -501,6 +549,7 @@ export default function App() {
                 return (
                   <div
                     key={i}
+                    lang="en"
                     className={`w-8 h-10 rounded-lg border-2 flex items-center justify-center font-display text-lg font-bold uppercase transition-colors ${
                       feedback === 'wrong'
                         ? 'border-rose-400 bg-rose-500/20 text-rose-200'
@@ -594,7 +643,7 @@ export default function App() {
                   className="flex items-center justify-between bg-white/8 border border-white/10 rounded-xl px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
                 >
                   <div>
-                    <p className="font-bold uppercase text-amber-300">{v.word}</p>
+                    <p lang="en" className="font-bold uppercase text-amber-300">{v.word}</p>
                     <p className="text-xs text-white/60">{v.tr}</p>
                   </div>
                   <p className="text-[10px] text-white/40">
@@ -745,6 +794,8 @@ export default function App() {
         </main>
       )}
 
+      {view === 'packs' && <PackMap level={state.level} lang={lang} />}
+
       {view === 'leaderboard' && <Leaderboard state={state} lang={lang} navActiveClass={theme.navActiveClass} />}
 
       {showOnboarding && <OnboardingOverlay lang={lang} onDismiss={dismissOnboarding} />}
@@ -769,6 +820,7 @@ export default function App() {
           isNewBest={wasNewBest}
           stars={starsEarned}
           rankUp={rankUp}
+          packDone={packDone}
           lang={lang}
           onContinue={() => {
             setSolvedWord(null);

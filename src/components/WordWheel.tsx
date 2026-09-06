@@ -167,6 +167,7 @@ export default function WordWheel({
             key={i}
             type="button"
             onPointerDown={(e) => handleDown(i, e.clientX, e.clientY)}
+            lang="en"
             className={`absolute flex items-center justify-center rounded-full font-display font-extrabold uppercase text-xl transition-transform active:scale-95 ${
               isSelected ? `${tileSelectedClass} scale-110` : 'bg-white text-slate-800'
             }`}

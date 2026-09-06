@@ -1,7 +1,8 @@
-import type { WordEntry } from '../lib/wordList';
+import type { WordEntry } from '../lib/wordPacks';
 import type { Lang } from '../lib/i18n';
 import { t } from '../lib/i18n';
 import type { Rank } from '../lib/ranks';
+import type { WordPack } from '../lib/wordPacks';
 
 interface Props {
   word: WordEntry;
@@ -11,10 +12,12 @@ interface Props {
   lang: Lang;
   /** Bu seviyeyi geçince yeni bir rütbeye geçildiyse -- kısa bir kutlama şeridi eklenir. */
   rankUp?: Rank | null;
+  /** Bu kelime bir paketi bitirdiyse o paket -- kutlama şeridi eklenir. */
+  packDone?: WordPack | null;
   onContinue: () => void;
 }
 
-export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars, lang, rankUp, onContinue }: Props) {
+export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars, lang, rankUp, packDone, onContinue }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-[fadeIn_0.2s_ease-out]">
       <div className="w-full max-w-xs rounded-3xl bg-gradient-to-b from-violet-600 to-fuchsia-700 p-6 text-center shadow-2xl animate-[popIn_0.35s_cubic-bezier(0.34,1.56,0.64,1)]">
@@ -36,7 +39,7 @@ export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars
         <h2 className="font-display text-2xl font-extrabold text-white mb-1">{t('win', lang)}</h2>
 
         <div className="my-4 rounded-2xl bg-white/15 px-4 py-3">
-          <p className="font-display text-2xl font-extrabold uppercase tracking-widest text-amber-300">
+          <p lang="en" className="font-display text-2xl font-extrabold uppercase tracking-widest text-amber-300">
             {word.word}
           </p>
           <p className="text-sm text-white/80 mt-1">{word.tr}</p>
@@ -44,6 +47,20 @@ export default function LevelCompleteModal({ word, coinsEarned, isNewBest, stars
 
         <p className="font-display text-amber-300 font-bold mb-1">+{coinsEarned} 🪙</p>
         {isNewBest && <p className="text-xs text-emerald-300 font-semibold mb-2">🔥 {t('newBest', lang)}</p>}
+
+        {/* Paket bitişi rütbe atlamasından ÖNCE gösteriliyor: ikisi aynı anda
+            olabilir ve paket bitirmek oyuncunun o oturumda peşinde koştuğu
+            somut hedef -- önce onu görmeli. */}
+        {packDone && (
+          <div className="mt-1 mb-2 rounded-xl bg-emerald-400/20 border border-emerald-300/40 px-3 py-2 animate-[popIn_0.4s_cubic-bezier(0.34,1.56,0.64,1)_0.15s_both]">
+            <p className="font-display font-extrabold text-sm text-emerald-200">
+              {packDone.icon} {t('packCompleted', lang)}
+            </p>
+            <p className="text-[11px] text-white/80 mt-0.5">
+              {lang === 'en' ? packDone.nameEn : packDone.name} · {t('packBonus', lang)} +40 🪙
+            </p>
+          </div>
+        )}
 
         {rankUp && (
           <div

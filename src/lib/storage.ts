@@ -1,4 +1,4 @@
-import type { WordEntry } from './wordList';
+import type { WordEntry } from './wordPacks';
 import { THEMES } from './themes';
 
 /**
@@ -122,6 +122,14 @@ export function saveState(state: GameState): void {
  * demek -- bilinçli bir tercih, "kolay kazanılıyor" şikayetinin devamı.
  */
 const COINS_PER_WIN = 2;
+
+/**
+ * Bir PAKETİ bitirmenin ödülü. Tek kelime +2 verirken paket sonu +40:
+ * 56-99 kelimelik bir bölümü bitirmek, oyuncunun saatlerini alan gerçek bir
+ * kilometre taşı. Ödülsüz bırakılsaydı paket sınırı oyuncu açısından yalnızca
+ * başlıktaki bir isim değişimi olurdu.
+ */
+export const PACK_BONUS_COINS = 40;
 const HINT_COIN_PENALTY_RATIO = 0.5; // ipucu kullanılırsa kazanılacak jetonun yarısı
 
 /**
@@ -144,6 +152,8 @@ export function completeLevel(
   usedHint: boolean,
   /** Kalkan varsa (bkz. streakShields) ipucu kullanılmış olsa da seri KIRILMAZ, kalkan tüketilir. */
   shieldConsumed = false,
+  /** Bu kelime bir paketin SON kelimesiyse (bkz. levels.ts completesPack) ek ödül verilir. */
+  packFinished = false,
 ): GameState {
   const currentStreak = !usedHint
     ? state.currentStreak + 1
@@ -156,13 +166,14 @@ export function completeLevel(
     Math.round(COINS_PER_WIN * streakMultiplier(state.currentStreak) * (usedHint ? HINT_COIN_PENALTY_RATIO : 1)),
     1,
   );
+  const total = gained + (packFinished ? PACK_BONUS_COINS : 0);
   const chestProgress = state.chestProgress + 1;
   const chestRollover = chestProgress >= CHEST_WIN_TARGET;
   const next: GameState = {
     ...state,
     level: state.level + 1,
-    coins: state.coins + gained,
-    totalCoinsEarned: state.totalCoinsEarned + gained,
+    coins: state.coins + total,
+    totalCoinsEarned: state.totalCoinsEarned + total,
     currentStreak,
     bestStreak: Math.max(state.bestStreak, currentStreak),
     vocabulary: [...state.vocabulary, { ...entry, learnedAt: Date.now() }],
