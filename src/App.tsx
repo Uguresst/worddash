@@ -10,6 +10,7 @@ import ChestModal from './components/ChestModal';
 import InfoTooltip from './components/InfoTooltip';
 import PackMap from './components/PackMap';
 import ReviewSession from './components/ReviewSession';
+import StreakCelebration from './components/StreakCelebration';
 import { submitScore } from './lib/leaderboard';
 import { playTap, playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
@@ -53,6 +54,13 @@ import { rankForLevel, nextRank, type Rank } from './lib/ranks';
 import { ACHIEVEMENTS, isUnlocked } from './lib/achievements';
 import { t } from './lib/i18n';
 import { dagarcikOzeti, tekrarOturumu, ustalasti, USTA_KUTU } from './lib/srs';
+import {
+  seriKutlamasi,
+  seriAktif,
+  SERI_ESIGI,
+  MAX_WRONG_ATTEMPTS,
+  type SeriKutlamasi,
+} from './lib/streak';
 import type { WordEntry, WordPack } from './lib/wordPacks';
 
 const DIFFICULTY_STYLE: Record<Difficulty, string> = {
@@ -60,10 +68,6 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
   medium: 'bg-amber-400/15 text-amber-300 border-amber-400/40',
   hard: 'bg-rose-400/15 text-rose-300 border-rose-400/40',
 };
-
-/** Bir kelimede kaç yanlış tahminden sonra seri kırılır -- 3. yanlıştan önce
- *  değil, TAM bu sayıya ulaşınca (bkz. handleSubmit). */
-const MAX_WRONG_ATTEMPTS = 2;
 
 const ONBOARDING_KEY = 'worddash_onboarded';
 function hasSeenOnboarding(): boolean {
@@ -105,6 +109,14 @@ export default function App() {
   // Bu kelime bir paketi bitirdiyse hangi paket -- LevelCompleteModal'daki
   // kutlama şeridi için, bir sonraki kelimede temizleniyor.
   const [packDone, setPackDone] = useState<WordPack | null>(null);
+  // Seviye penceresi kapandıktan SONRA gösterilecek seri kutlaması.
+  // Bekletiliyor çünkü iki kutlamayı üst üste bindirmek ikisini de yutar.
+  const [streakParty, setStreakParty] = useState<SeriKutlamasi | null>(null);
+  // Bu seri turunda rekor kutlaması gösterildi mi. Kalıcı DEĞİL: bir seri
+  // turu tek oturum içinde yaşayan bir şey, sayfayı yenileyip aynı turu
+  // sürdürmek diye bir durum yok (yenileyince seri zaten devam eder ama
+  // en fazla bir kutlama tekrarı olur -- zararsız).
+  const [rekorKutlandi, setRekorKutlandi] = useState(false);
   const [showChest, setShowChest] = useState(false);
 
   const lang = state.lang;
@@ -149,6 +161,11 @@ export default function App() {
       setStarsEarned(revealedHint === 0 ? 3 : revealedHint === 1 ? 2 : 1);
       setRankUp(newRank.id !== prevRank.id ? newRank : null);
       setPackDone(finishedPack);
+      const kutlama = seriKutlamasi(next.currentStreak, prevBest, rekorKutlandi);
+      setStreakParty(kutlama);
+      // Sözleşme streak.ts'te: rekorMu true olan HER kutlama rekoru
+      // bildirmiş sayılır, yalnızca tur === 'rekor' olan değil.
+      if (kutlama?.rekorMu) setRekorKutlandi(true);
       setSolvedWord(word);
       setState(next);
       setRevealedHint(0); // sıradaki seviye için sıfırla
@@ -162,7 +179,14 @@ export default function App() {
       setWrongAttempts(attempts);
       // Ayni kelimede 2. yanlistan sonra seri kirilir -- kalkanin varsa
       // onun yerine kalkan tuketilir (bkz. breakStreakIfNeeded).
-      if (attempts >= MAX_WRONG_ATTEMPTS) setState(breakStreakIfNeeded(state));
+      if (attempts >= MAX_WRONG_ATTEMPTS) {
+        const next = breakStreakIfNeeded(state);
+        setState(next);
+        // Seri gerçekten kırıldıysa (kalkan yemediyse) yeni tur başlıyor:
+        // rekor bayrağı sıfırlanmalı, yoksa oyuncu bir daha ASLA rekor
+        // kutlaması görmez.
+        if (next.currentStreak === 0) setRekorKutlandi(false);
+      }
       setFeedback('wrong');
       setTimeout(() => setFeedback('idle'), 400);
       playWrong();
@@ -298,8 +322,9 @@ export default function App() {
           <CoinBadge
             icon="🔥"
             value={state.currentStreak}
+            dim={!seriAktif(state.currentStreak)}
             label={t('streak', lang)}
-            hot={state.currentStreak >= 3}
+            hot={seriAktif(state.currentStreak)}
             suffix={multiplier > 1 ? `×${multiplier}` : undefined}
             suffixTitle={t('streakMultiplierInfo', lang)}
           />
@@ -529,9 +554,11 @@ export default function App() {
                 <span className={`text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border ${DIFFICULTY_STYLE[difficulty]}`}>
                   {t(difficulty, lang)} · {word.word.length} {lang === 'tr' ? 'harf' : 'letters'}
                 </span>
-                {/* Canlar: bu kelimede kac yanlisin kaldigini gosteriyor --
-                    2. yanlista seri kirilir (kalkanin yoksa), bu yuzden
-                    kullanici NEDEN kirildigini burada onceden gorebiliyor. */}
+                {/* Canlar: bu kelimede kac yanlis hakkin kaldigini gosteriyor.
+                    Artik TEK hak var (bkz. streak.ts MAX_WRONG_ATTEMPTS) --
+                    ilk yanlista seri kirilir, kalkanin yoksa. Hakkin bittigi
+                    an kalbin sonmesi, seriyi kaybettigini soyleyen tek
+                    isaret; o yuzden burada duruyor. */}
                 <span className="flex gap-0.5 text-sm" title={t('livesLabel', lang)}>
                   {Array.from({ length: MAX_WRONG_ATTEMPTS }, (_, i) => (
                     <span key={i}>{i < MAX_WRONG_ATTEMPTS - wrongAttempts ? '❤️' : '🤍'}</span>
@@ -568,6 +595,20 @@ export default function App() {
                   {word.tr}
                 </p>
               </div>
+            )}
+
+            {/* Seri durumu: esigin altinda hedefi, ustunde yandigini soyler.
+                Ust bardaki rozet yalnizca bir sayi; "seri olmasi icin ne
+                lazim" bilgisi hicbir yerde yazmiyordu. */}
+            {seriAktif(state.currentStreak) ? (
+              <p className="text-[11px] font-bold text-amber-300/90 mb-2">
+                🔥 {state.currentStreak} {t('streak', lang)}
+                {multiplier > 1 && <span className="text-emerald-300"> · ×{multiplier}</span>}
+              </p>
+            ) : (
+              <p className="text-[11px] text-white/45 mb-2">
+                {t('streakBuilding', lang).replace('{n}', String(SERI_ESIGI - state.currentStreak))}
+              </p>
             )}
 
             {/* Cevap şeridi: harf sayısı kadar kutu, ipucu açılanlar dolu */}
@@ -914,7 +955,7 @@ export default function App() {
         <LevelCompleteModal
           word={solvedWord}
           coinsEarned={coinsEarned}
-          isNewBest={wasNewBest}
+          isNewBest={wasNewBest && !streakParty}
           stars={starsEarned}
           rankUp={rankUp}
           packDone={packDone}
@@ -923,6 +964,16 @@ export default function App() {
             setSolvedWord(null);
             setRankUp(null);
           }}
+        />
+      )}
+
+      {/* Seri kutlamasi seviye penceresinden SONRA: ust uste binen iki
+          kutlama birbirini yutar, sirayla gelenler ikisi de gorulur. */}
+      {!solvedWord && streakParty && (
+        <StreakCelebration
+          kutlama={streakParty}
+          lang={lang}
+          onClose={() => setStreakParty(null)}
         />
       )}
     </div>

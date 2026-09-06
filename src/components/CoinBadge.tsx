@@ -15,6 +15,7 @@ export default function CoinBadge({
   value,
   label,
   hot,
+  dim,
   suffix,
   suffixTitle,
 }: {
@@ -22,6 +23,10 @@ export default function CoinBadge({
   value: number;
   label: string;
   hot?: boolean;
+  /** Sayac henuz "anlamli" degilse sonuk cizilir -- seri esigin altindayken
+   *  parlak amber bir rakam gostermek, olmayan bir seriyi varmis gibi
+   *  gosteriyordu. */
+  dim?: boolean;
   /** Değerin yanına küçük bir rozet olarak eklenir -- örn. seri çarpanı "×2". */
   suffix?: string;
   suffixTitle?: string;
@@ -42,14 +47,14 @@ export default function CoinBadge({
     <div className="text-right">
       <p
         className={`font-display text-lg font-extrabold leading-none transition-transform duration-200 ${
-          bump ? 'scale-125 text-amber-300' : 'text-amber-400'
+          bump ? 'scale-125 text-amber-300' : dim ? 'text-white/45' : 'text-amber-400'
         }`}
       >
         <span
           className="inline-block"
           style={hot ? { animation: 'flamePulse 0.9s ease-in-out infinite' } : undefined}
         >
-          {icon}
+          <span className={dim ? 'grayscale opacity-60' : undefined}>{icon}</span>
         </span>{' '}
         {value}
         {suffix && (

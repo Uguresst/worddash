@@ -42,8 +42,12 @@ ayrı klasör, ayrı git geçmişi, ayrı (henüz kurulmamış) Supabase projesi
   bir kez bilmek onu öğrenmek değil. İkinci faydası en az ilki kadar
   önemli: yarın uygulamayı açmak için somut bir sebep veriyor.
 - **Kelime dağarcığım**: çözdüğün her kelime tarihiyle birlikte listeye
-  eklenir. **Seri (streak)**: ipucu kullanmadan art arda doğru bilme sayısı,
-  en iyisi kalıcı tutulur.
+  eklenir.
+- **Seri (streak)** ([`streak.ts`](src/lib/streak.ts)): her kelimede **tek
+  yanlış hakkı** var; seri **3. doğru cevapta oluşuyor** ve o ana kadar
+  arayüzde sönük duruyor (1-2 doğru cevap henüz bir seri değil). İlk seride,
+  çarpan eşiklerinde (7, 15) ve kişisel rekor kırıldığında tam ekran kutlama
+  açılıyor -- ama rekor kutlaması **tur başına bir kez**.
 - **TR/EN arayüz dili** ([`i18n.ts`](src/lib/i18n.ts)): metin yüzeyi küçük
   olduğu için context yerine saf `t(key, lang)` fonksiyonu.
 
@@ -57,6 +61,7 @@ npm run preview       # build'i yerelde önizle
 npm run check:words   # kelime havuzu: mükerrer, harf sınırı, zorluk sırası
 npm run check:levels  # seviye <-> paket eşlemesi (1.293 seviyenin tamamı)
 npm run check:srs     # aralıklı tekrar mantığı (kutular, aralıklar, oturum)
+npm run check:streak  # seri kuralları ve kutlama sıklığı (akış simülasyonu)
 npm run fonts         # yazı tiplerini indirip public/fonts + src/fonts.css üret
 npm run check         # yukarıdakilerin hepsi + tsc + oxlint
 npm run store:assets  # Play Console görselleri (önce build + preview gerekir)
@@ -73,6 +78,11 @@ gözle yakalanamayacak hataları yakalamak için yazıldı:
   eşlemesinin **tamamını** tarıyor (örnekleme değil; sınır hataları tam
   olarak paket geçişlerinde saklanır). Bu hataların hiçbiri derlemede
   patlamaz, hepsi oyuncuya sessizce yanlış bilgi gösterirdi.
+- [`check-streak.mjs`](scripts/check-streak.mjs) — seri kutlama sıklığı.
+  Tek tek çağrıları değil **ardışık cevapları** simüle ediyor, çünkü ilk
+  yazılan rekor kuralı ("yeni seri === eski rekor + 1") tek çağrıda doğru
+  görünüyordu ama gerçek akışta `bestStreak` her cevapta yükseldiği için
+  her kelimede tam ekran kutlama veriyordu.
 - [`check-srs.mjs`](scripts/check-srs.mjs) — aralıklı tekrar mantığı.
   Buradaki hatalar oyunda hiç görünmez ama öğrenmeyi bozar: yanlış bilinen
   kelime uzun aralığa atılırsa haftalarca sorulmaz, oturum sınırı

@@ -47,10 +47,13 @@ Türkçe ipucu varsayılan olarak açık — oyun bir çeviri alıştırmasına
 dönüşüyor. Kapattığında saf anagram bulmacasına dönüyor. İkisi de tek
 dokunuş uzağında.
 
-▸ SERİNİ KORU
-Art arda ipucu kullanmadan bildiğin her kelime seriyi büyütüyor, seri
-büyüdükçe kazandığın jeton katlanıyor. Bir kelimede iki kez yanılırsan seri
-kırılıyor — ama Seri Kalkanı aldıysan o hakkı kullanıyorsun.
+▸ SERİNİ KORU — TEK YANLIŞ YETER
+Üç kelimeyi üst üste hatasız bilince serin başlıyor ve kazandığın jeton
+×1,5 oluyor; 7'de ×2, 15'te ×3. Ama her kelimede tek hakkın var: bir yanlış
+seriyi sıfırlar. Seri Kalkanı aldıysan o hakkı kullanıyorsun.
+
+İlk serinde, kazancın katlandığında ve kendi rekorunu kırdığında ayrı bir
+kutlama ekranı açılıyor.
 
 ▸ JETON, SANDIK VE TEMALAR
 Her doğru cevap jeton kazandırıyor. Jetonla Seri Kalkanı, Atlama Jokeri ve
