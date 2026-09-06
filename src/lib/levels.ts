@@ -1,4 +1,4 @@
-import { WORD_PACKS, ALL_WORDS, TOTAL_WORDS, TOTAL_PACKS, type WordEntry, type WordPack } from './wordPacks';
+import { WORD_PACKS, ALL_WORDS, TOTAL_WORDS, TOTAL_PACKS, type WordEntry, type WordPack } from './wordPacks.ts';
 
 export { TOTAL_WORDS, TOTAL_PACKS };
 export type { WordEntry, WordPack };

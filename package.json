@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check:words": "node scripts/check-words.mjs"
+    "check:words": "node scripts/check-words.mjs",
+    "check:levels": "node scripts/check-levels.mjs",
+    "check": "npm run check:words && npm run check:levels && tsc -b && oxlint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

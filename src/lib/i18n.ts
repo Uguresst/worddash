@@ -101,6 +101,12 @@ const DICT = {
     currentPack: 'Paket',
     packsDoneLabel: 'paket bitti',
     wordsTotalLabel: 'kelime',
+    leaveBoard: 'Lider tablosundan ayrıl',
+    leaveBoardConfirm: 'Takma adın ve skorun sunucudan kalıcı olarak silinecek. Cihazdaki ilerlemen (seviye, kelimeler, jeton) kalır. Emin misin?',
+    leaveBoardYes: 'Evet, sil',
+    leaveBoardCancel: 'Vazgeç',
+    leaveBoardDone: 'Skorun silindi.',
+    privacy: 'Gizlilik',
   },
   en: {
     title: 'WordDash',
@@ -198,6 +204,12 @@ const DICT = {
     currentPack: 'Pack',
     packsDoneLabel: 'packs done',
     wordsTotalLabel: 'words',
+    leaveBoard: 'Leave the leaderboard',
+    leaveBoardConfirm: 'Your nickname and score will be permanently deleted from the server. Your progress on this device (level, words, coins) stays. Are you sure?',
+    leaveBoardYes: 'Yes, delete',
+    leaveBoardCancel: 'Cancel',
+    leaveBoardDone: 'Your score was deleted.',
+    privacy: 'Privacy',
   },
 } as const;
 

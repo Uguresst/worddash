@@ -4,6 +4,7 @@ import {
   fetchTopScores,
   getSavedNickname,
   setNickname as saveNickname,
+  deleteMyScore,
   type LeaderboardRow,
 } from '../lib/leaderboard';
 import type { GameState } from '../lib/storage';
@@ -24,6 +25,9 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
   const [myId, setMyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [joinError, setJoinError] = useState(false);
+  // Silme iki adimli: tek dokunusla geri alinamaz bir sey yapilmamali.
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     // Takma ad yoksa bu bilesen zaten asagida "katil" ekranini donuyor,
@@ -44,6 +48,22 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
     // nickname degistiginde (katilinca) yeniden cek; state.level'de her
     // seviye submitScore zaten yaziyor ama bu goruntu anlik acilista yeterli.
   }, [nickname]);
+
+  async function handleLeave() {
+    if (leaving) return;
+    setLeaving(true);
+    try {
+      await deleteMyScore();
+      setNicknameState(null);
+      setRows([]);
+      setMyId(null);
+      setConfirmLeave(false);
+    } catch (err) {
+      console.error('Lider tablosundan cikilamadi:', err);
+    } finally {
+      setLeaving(false);
+    }
+  }
 
   async function handleJoin() {
     if (!input.trim() || joining) return;
@@ -137,6 +157,50 @@ export default function Leaderboard({ state, lang, navActiveClass }: Props) {
           })}
         </ol>
       )}
+
+      {/* Veri silme: Google Play, hesap oluşturan uygulamalarda uygulama
+          İÇİNDEN ulaşılabilir bir silme yolu şart koşuyor. WordDash anonim
+          de olsa bir auth.users satırı yaratıyor, yani kapsama giriyor.
+          İki adımlı: tek dokunuşla geri alınamaz bir şey olmamalı. */}
+      <div className="mt-8 pt-4 border-t border-white/10">
+        {confirmLeave ? (
+          <div className="rounded-2xl border border-rose-400/40 bg-rose-400/10 p-4">
+            <p className="text-[13px] leading-relaxed text-white/85">{t('leaveBoardConfirm', lang)}</p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={handleLeave}
+                disabled={leaving}
+                className="flex-1 rounded-xl bg-rose-500 py-2.5 text-[13px] font-bold text-white active:scale-95 transition-transform disabled:opacity-60"
+              >
+                {t('leaveBoardYes', lang)}
+              </button>
+              <button
+                onClick={() => setConfirmLeave(false)}
+                className="flex-1 rounded-xl bg-white/10 py-2.5 text-[13px] font-bold text-white/80 active:scale-95 transition-transform"
+              >
+                {t('leaveBoardCancel', lang)}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => setConfirmLeave(true)}
+              className="text-[12px] font-semibold text-white/55 underline underline-offset-2 hover:text-white/80"
+            >
+              {t('leaveBoard', lang)}
+            </button>
+            <a
+              href="/gizlilik.html"
+              target="_blank"
+              rel="noopener"
+              className="text-[12px] font-semibold text-white/45 hover:text-white/70"
+            >
+              {t('privacy', lang)} ↗
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

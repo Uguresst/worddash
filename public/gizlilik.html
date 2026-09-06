@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WordDash — Gizlilik Politikası / Privacy Policy</title>
+    <meta
+      name="description"
+      content="WordDash gizlilik politikası: hangi veriler toplanıyor, neden, ne kadar süreyle ve nasıl silinir."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #0f172a;
+        --soft: #475569;
+        --line: #e2e8f0;
+        --brand: #7c3aed;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2.5rem 1.25rem 4rem;
+        font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: var(--ink);
+        background: #fff;
+      }
+      main { max-width: 40rem; margin: 0 auto; }
+      h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 .35rem; }
+      h2 { font-size: 1.15rem; margin: 2.25rem 0 .6rem; }
+      h3 { font-size: 1rem; margin: 1.5rem 0 .4rem; }
+      p, li { color: var(--soft); }
+      ul { padding-left: 1.25rem; }
+      li { margin: .35rem 0; }
+      .meta { font-size: .85rem; color: #94a3b8; margin: 0 0 2rem; }
+      .box {
+        border: 1px solid var(--line);
+        border-radius: .9rem;
+        padding: 1rem 1.15rem;
+        margin: 1.25rem 0;
+        background: #f8fafc;
+      }
+      .box strong { color: var(--ink); }
+      hr { border: 0; border-top: 1px solid var(--line); margin: 3rem 0; }
+      a { color: var(--brand); }
+      code {
+        background: #f1f5f9;
+        padding: .1rem .35rem;
+        border-radius: .3rem;
+        font-size: .9em;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { color-scheme: dark; --ink: #f1f5f9; --soft: #94a3b8; --line: #1e293b; --brand: #a78bfa; }
+        body { background: #0f172a; }
+        .box { background: #1e293b; }
+        code { background: #1e293b; }
+        .meta { color: #64748b; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>WordDash — Gizlilik Politikası</h1>
+      <p class="meta">Son güncelleme: 6 Eylül 2026</p>
+
+      <p>
+        WordDash bir kelime oyunudur. <strong>Hesap açmanız gerekmez</strong>; e-posta, telefon, ad,
+        soyad, adres veya konum bilgisi hiçbir aşamada istenmez ve toplanmaz.
+      </p>
+
+      <div class="box">
+        <strong>Kısaca:</strong> Oyun ilerlemenizin tamamı cihazınızda kalır. Sunucuya
+        <strong>yalnızca</strong> lider tablosuna kendi isteğinizle katılırsanız veri gönderilir; o
+        veri de bir takma addan ve üç sayıdan ibarettir. Uygulama içinden tek dokunuşla silebilirsiniz.
+      </div>
+
+      <h2>1. Cihazınızda kalan veriler</h2>
+      <p>
+        Aşağıdakiler tarayıcınızın yerel deposunda (<code>localStorage</code>) tutulur, hiçbir sunucuya
+        gönderilmez ve tarafımızca görülemez:
+      </p>
+      <ul>
+        <li>Seviye ilerlemeniz ve çözdüğünüz kelimelerin listesi</li>
+        <li>Jeton sayınız, satın aldığınız temalar ve güçlendirmeler</li>
+        <li>Seri (streak) bilgileriniz ve günlük ödül geçmişiniz</li>
+        <li>Arayüz dili, ses ve ipucu tercihleriniz</li>
+      </ul>
+      <p>
+        Uygulamayı kaldırdığınızda veya tarayıcı verilerinizi temizlediğinizde bu bilgiler
+        cihazınızdan silinir. Bizde bir kopyası olmadığı için geri getirilemez.
+      </p>
+
+      <h2>2. Lider tablosuna katılırsanız</h2>
+      <p>
+        Lider tablosu <strong>isteğe bağlıdır</strong>. Yalnızca siz bir takma ad girip katılmayı
+        seçerseniz sunucumuza (Supabase) şunlar yazılır:
+      </p>
+      <ul>
+        <li><strong>Takma ad</strong> — sizin yazdığınız, en fazla 20 karakterlik ad</li>
+        <li><strong>En yüksek seviyeniz</strong>, <strong>toplam jetonunuz</strong>, <strong>en iyi seriniz</strong></li>
+        <li>
+          <strong>Anonim bir kimlik numarası</strong> — cihazınızı satırınıza bağlayan rastgele bir
+          değer. Bu kimliğe bağlı e-posta veya şifre yoktur; kim olduğunuzu göstermez.
+        </li>
+        <li>Satırın son güncellenme zamanı</li>
+      </ul>
+      <p>
+        Bu veriler yalnızca lider tablosunu göstermek için kullanılır. Reklam amacıyla kullanılmaz,
+        satılmaz, üçüncü taraflarla paylaşılmaz. Takma adınız ve skorunuz lider tablosunda diğer
+        oyunculara görünür — takma adınızı seçerken bunu göz önünde bulundurun.
+      </p>
+
+      <h2>3. Verilerinizi silme</h2>
+      <p>Lider tablosu kaydınızı istediğiniz an, kendiniz silebilirsiniz:</p>
+      <ul>
+        <li>
+          Uygulamada <strong>Rekabet</strong> sekmesini açın, sayfanın altındaki
+          <strong>“Lider tablosundan ayrıl”</strong> bağlantısına dokunun ve onaylayın.
+        </li>
+        <li>
+          Satırınız sunucudan kalıcı olarak silinir ve oturumunuz kapatılır. Cihazdaki oyun
+          ilerlemeniz etkilenmez.
+        </li>
+      </ul>
+      <p>
+        Uygulamaya erişiminiz yoksa veya başka bir talebiniz varsa
+        <a href="mailto:uguresat0421@gmail.com">uguresat0421@gmail.com</a> adresine yazabilirsiniz;
+        talebinizi 30 gün içinde sonuçlandırırız.
+      </p>
+
+      <h2>4. Kullandığımız hizmet</h2>
+      <p>
+        Lider tablosu <strong>Supabase</strong> altyapısında barındırılır. Supabase, yukarıda sayılan
+        verileri bizim adımıza saklar ve teknik olarak gereken bağlantı kayıtlarını (IP adresi gibi)
+        tutabilir. Başka hiçbir analitik, reklam veya izleme aracı kullanılmıyor: uygulamada üçüncü
+        taraf reklam kimliği, çerez tabanlı izleme veya davranış analizi yoktur.
+      </p>
+
+      <h2>5. Çocukların gizliliği</h2>
+      <p>
+        WordDash her yaşa uygundur ve çocuklardan bilerek kişisel veri toplamaz. Zaten toplanan tek
+        şey kullanıcının kendi yazdığı takma ad ve oyun skorlarıdır. Çocuğunuzun uygunsuz bir takma
+        ad girdiğini düşünüyorsanız yukarıdaki adresten bize bildirin.
+      </p>
+
+      <h2>6. Değişiklikler</h2>
+      <p>
+        Bu politika değişirse bu sayfadaki tarih güncellenir. Toplanan veri türü genişlerse
+        değişiklik uygulama içinde ayrıca duyurulur.
+      </p>
+
+      <hr />
+
+      <h1 lang="en">WordDash — Privacy Policy</h1>
+      <p class="meta" lang="en">Last updated: 6 September 2026</p>
+
+      <div lang="en">
+        <p>
+          WordDash is a word game. <strong>No account is required.</strong> We never ask for or
+          collect your email, phone number, name, address or location.
+        </p>
+
+        <div class="box">
+          <strong>In short:</strong> All of your game progress stays on your device. Data is sent to
+          our server <strong>only</strong> if you choose to join the leaderboard, and that data is a
+          nickname plus three numbers. You can delete it from inside the app at any time.
+        </div>
+
+        <h2>1. Data that stays on your device</h2>
+        <p>
+          The following is kept in your browser's local storage. It is never sent anywhere and we
+          cannot see it:
+        </p>
+        <ul>
+          <li>Your level progress and the list of words you have solved</li>
+          <li>Your coins, purchased themes and power-ups</li>
+          <li>Your streak data and daily reward history</li>
+          <li>Interface language, sound and hint preferences</li>
+        </ul>
+        <p>
+          Uninstalling the app or clearing your browser data deletes this. We hold no copy, so it
+          cannot be restored.
+        </p>
+
+        <h2>2. If you join the leaderboard</h2>
+        <p>
+          The leaderboard is <strong>optional</strong>. Only if you enter a nickname and choose to
+          join, the following is written to our server (Supabase):
+        </p>
+        <ul>
+          <li><strong>Nickname</strong> — the name you type, up to 20 characters</li>
+          <li><strong>Highest level</strong>, <strong>total coins</strong>, <strong>best streak</strong></li>
+          <li>
+            <strong>An anonymous identifier</strong> — a random value linking your device to your
+            row. It has no email or password attached and does not identify who you are.
+          </li>
+          <li>The time the row was last updated</li>
+        </ul>
+        <p>
+          This data is used only to display the leaderboard. It is not used for advertising, not
+          sold, and not shared with third parties. Your nickname and score are visible to other
+          players — please keep that in mind when choosing a nickname.
+        </p>
+
+        <h2>3. Deleting your data</h2>
+        <p>You can delete your leaderboard record yourself, at any time:</p>
+        <ul>
+          <li>
+            Open the <strong>Leaderboard</strong> tab in the app, tap
+            <strong>“Leave the leaderboard”</strong> at the bottom and confirm.
+          </li>
+          <li>
+            Your row is permanently deleted from the server and your session is signed out. Your
+            on-device game progress is not affected.
+          </li>
+        </ul>
+        <p>
+          If you cannot access the app or have another request, write to
+          <a href="mailto:uguresat0421@gmail.com">uguresat0421@gmail.com</a>; we will handle it
+          within 30 days.
+        </p>
+
+        <h2>4. Service we use</h2>
+        <p>
+          The leaderboard is hosted on <strong>Supabase</strong>. Supabase stores the data listed
+          above on our behalf and may keep technically necessary connection records (such as IP
+          addresses). We use no other analytics, advertising or tracking tools: there is no
+          third-party ad identifier, cookie-based tracking or behavioural profiling in this app.
+        </p>
+
+        <h2>5. Children's privacy</h2>
+        <p>
+          WordDash is suitable for all ages and does not knowingly collect personal data from
+          children. The only data collected is a self-chosen nickname and game scores. If you believe
+          a child has entered an inappropriate nickname, please report it to the address above.
+        </p>
+
+        <h2>6. Changes</h2>
+        <p>
+          If this policy changes, the date on this page is updated. If the kinds of data we collect
+          ever expand, the change will also be announced inside the app.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>

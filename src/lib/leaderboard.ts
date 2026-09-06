@@ -88,6 +88,33 @@ export async function submitScore(state: GameState): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Kullanıcının lider tablosu satırını siler ve oturumu kapatır.
+ *
+ * SIRA ÖNEMLİ: önce satır silinir (silme için oturum lazım), sonra oturum
+ * kapatılır. Oturum kapanınca cihaz bir daha aynı anonim kimliğe dönemez --
+ * yani "sildim ama eski skorum geri geldi" durumu oluşmaz. Takma ad da
+ * yerelden siliniyor, böylece uygulama kullanıcıyı yeniden katılım
+ * ekranına alır.
+ *
+ * Google Play, hesap oluşturan uygulamalarda uygulama İÇİNDEN ulaşılabilir
+ * bir veri silme yolu şart koşuyor; bu fonksiyon o gerekliliği karşılıyor.
+ */
+export async function deleteMyScore(): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user.id;
+  if (userId) {
+    const { error } = await supabase.from('leaderboard').delete().eq('id', userId);
+    if (error) throw error;
+  }
+  await supabase.auth.signOut();
+  try {
+    localStorage.removeItem(NICKNAME_KEY);
+  } catch {
+    // localStorage kapaliysa satir zaten sunucudan silindi -- asil is bitti.
+  }
+}
+
 export async function fetchTopScores(limit = 20): Promise<LeaderboardRow[]> {
   const { data, error } = await supabase
     .from('leaderboard')
