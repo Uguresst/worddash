@@ -10,11 +10,12 @@
     "preview": "vite preview",
     "check:words": "node scripts/check-words.mjs",
     "check:levels": "node scripts/check-levels.mjs",
-    "check": "npm run check:words && npm run check:levels && npm run check:srs && npm run check:streak && tsc -b && oxlint",
+    "check": "npm run check:words && npm run check:levels && npm run check:srs && npm run check:streak && npm run check:cloudsave && tsc -b && oxlint",
     "store:assets": "node scripts/gen-store-assets.mjs",
     "check:srs": "node scripts/check-srs.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
-    "check:streak": "node scripts/check-streak.mjs"
+    "check:streak": "node scripts/check-streak.mjs",
+    "check:cloudsave": "node scripts/check-cloudsave.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

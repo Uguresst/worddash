@@ -11,7 +11,9 @@ import InfoTooltip from './components/InfoTooltip';
 import PackMap from './components/PackMap';
 import ReviewSession from './components/ReviewSession';
 import StreakCelebration from './components/StreakCelebration';
+import BackupPanel from './components/BackupPanel';
 import { submitScore } from './lib/leaderboard';
+import { yedekle, yedeklemeAcikMi } from './lib/cloudSave.ts';
 import { playTap, playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
 import {
@@ -25,6 +27,7 @@ import {
 import { scrambleWord } from './lib/scramble';
 import {
   loadState,
+  saveState,
   completeLevel,
   setLang,
   buyTheme,
@@ -136,6 +139,33 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  /*
+    Yedeği otomatik gönder.
+
+    Her değişiklikte değil, son değişiklikten GECIKMELI: bir seviyeyi
+    bitirmek state'i arka arkaya birkaç kez güncelliyor (jeton, seri,
+    dağarcık, sandık) ve her biri için ayrı istek atmak hem gereksiz hem
+    de hız sınırına takılmanın yolu. Oyuncu duraklayınca tek istek gider.
+
+    Sessiz başarısızlık BİLEREK: internet yoksa oyun oynanmaya devam
+    etmeli, yerel kayıt zaten yazıldı. Bir sonraki değişiklikte yeniden
+    denenecek.
+  */
+  useEffect(() => {
+    if (!yedeklemeAcikMi()) return;
+    const id = setTimeout(() => {
+      yedekle(state).catch(() => {});
+    }, 4000);
+    return () => clearTimeout(id);
+  }, [state]);
+
+  /** Kurtarılan kaydı uygula: hem ekrana hem diske. */
+  function handleRestore(next: GameState) {
+    setState(next);
+    saveState(next);
+    setView('game');
+  }
 
   function handleClaimDaily() {
     const { state: next } = claimDailyReward(state);
@@ -934,7 +964,16 @@ export default function App() {
         />
       )}
 
-      {view === 'leaderboard' && <Leaderboard state={state} lang={lang} navActiveClass={theme.navActiveClass} />}
+      {view === 'leaderboard' && (
+        <main className="w-full max-w-md flex-1 flex flex-col items-center animate-[viewFade_0.25s_ease-out]">
+          <Leaderboard state={state} lang={lang} navActiveClass={theme.navActiveClass} />
+          {/* Yedekleme lider tablosundan BAGIMSIZ bir tercih, ama ayni
+              sekmede: uygulamanin aga ciktigi her sey burada topluysa
+              "katilmadigin surece hicbir sunucuya baglanmaz" cumlesi hem
+              dogru hem anlasilir kaliyor. */}
+          <BackupPanel state={state} lang={lang} onRestore={handleRestore} />
+        </main>
+      )}
 
       {showOnboarding && <OnboardingOverlay lang={lang} onDismiss={dismissOnboarding} />}
 

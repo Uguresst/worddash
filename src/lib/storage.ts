@@ -1,6 +1,6 @@
 import type { WordEntry } from './wordPacks';
-import { ilkTekrar, sonrakiTekrar } from './srs';
-import { THEMES } from './themes';
+import { ilkTekrar, sonrakiTekrar } from './srs.ts';
+import { THEMES } from './themes.ts';
 
 /**
  * v1: "günde bir kelime" (Wordle mantığı) kullanıcıyı sınırlıyordu --
@@ -60,7 +60,9 @@ export interface GameState {
   chestsReady: number;
 }
 
-const DEFAULT_STATE: GameState = {
+/* Dışa açık: ağdan gelen bir kaydın eksik alanlarını doldururken
+   cloudSave.ts de bunu taban alıyor (bkz. guvenliDurum). */
+export const DEFAULT_STATE: GameState = {
   level: 0,
   coins: 0,
   bestStreak: 0,

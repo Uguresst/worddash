@@ -78,8 +78,13 @@ katılmazsın — oyunun tamamı zaten çevrimdışı çalışıyor.
 Reklam yok. Uygulama içi satın alma yok. Kayıt yok, e-posta yok, şifre yok.
 Can beklemek yok, oynamak için izin istemek yok. Aç ve oyna.
 
-Lider tablosuna katılmadığın sürece uygulama hiçbir dış sunucuya bağlanmaz;
-tamamen çevrimdışı oynanır.
+▸ İLERLEMENİ KAYBETME
+İstersen yedeklemeyi açıp bir kurtarma kodu alırsın. Telefon değiştirdiğinde
+ya da uygulamayı yeniden kurduğunda kodu girip kaldığın yerden devam
+edersin. Yine kayıt yok, e-posta yok — sadece bir kod.
+
+Lider tablosuna katılmadığın ve yedeklemeyi açmadığın sürece uygulama hiçbir
+dış sunucuya bağlanmaz; tamamen çevrimdışı oynanır.
 
 Türkçe ve İngilizce arayüz desteği vardır.
 
@@ -123,6 +128,7 @@ kullanıcılardan).
 |---|---|---|---|---|
 | Kişisel bilgi → Kullanıcı kimlikleri (takma ad + anonim hesap kimliği) | Evet | Hayır | **İsteğe bağlı** | Uygulama işlevi |
 | Uygulama etkinliği → Uygulama içi etkileşimler (seviye, jeton, seri) | Evet | Hayır | **İsteğe bağlı** | Uygulama işlevi |
+| Uygulama etkinliği → Diğer (yedeklenen oyun ilerlemesi: seviye, jeton, kelime listesi, temalar) | Evet | Hayır | **İsteğe bağlı** | Uygulama işlevi |
 
 Diğer tüm kategoriler (konum, kişiler, fotoğraf, dosya, sağlık, ödeme,
 kişisel iletişim, cihaz kimliği, reklam kimliği): **Hayır.**
@@ -130,7 +136,8 @@ kişisel iletişim, cihaz kimliği, reklam kimliği): **Hayır.**
 Ek sorular:
 - Veriler aktarım sırasında şifreleniyor mu? → **Evet** (HTTPS)
 - Kullanıcı verilerinin silinmesini talep edebilir mi? → **Evet**
-  (uygulama içinde Rekabet → "Lider tablosundan ayrıl")
+  (uygulama içinde Rekabet → "Lider tablosundan ayrıl" ve "Yedeklemeyi kapat";
+  ikisi de sunucudaki satırı kalıcı olarak siliyor)
 - Veriler üçüncü taraflarla paylaşılıyor mu? → **Hayır**
 - Uygulamada reklam var mı? → **Hayır**
 
@@ -153,9 +160,11 @@ Beklenen sonuç: **3+ / Herkes**, "Kullanıcılar etkileşebilir" etiketiyle.
 
 1. `npm run check` — hepsi temiz olmalı.
 2. `npm run build && git push` — Vercel otomatik yayınlar.
-3. **Supabase göçünü çalıştır:** `20260906090000_leaderboard_self_delete.sql`
-   Dashboard → SQL Editor. Bu yapılmazsa "Lider tablosundan ayrıl" düğmesi
-   sessizce başarısız olur ve veri silme beyanı YALAN olur.
+3. **Supabase göçlerini çalıştır** (Dashboard → SQL Editor, sırayla):
+   - `20260906090000_leaderboard_self_delete.sql` — bu yapılmazsa "Lider
+     tablosundan ayrıl" sessizce başarısız olur ve veri silme beyanı YALAN olur.
+   - `20260907090000_cloud_save.sql` — yedekleme tablosu ve kurtarma
+     fonksiyonları. Yapılmazsa "Yedeklemeyi Aç" hata verir.
 4. Bubblewrap ile TWA paketle:
    ```
    npx @bubblewrap/cli init --manifest https://<alan-adı>/manifest.webmanifest

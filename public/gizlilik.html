@@ -127,6 +127,22 @@
         talebinizi 30 gün içinde sonuçlandırırız.
       </p>
 
+      <h2>3b. Yedeklemeyi açarsanız</h2>
+      <p>
+        Yedekleme de <strong>isteğe bağlıdır</strong> ve lider tablosundan ayrıdır. Açarsanız oyun
+        ilerlemeniz (seviye, jeton, kelime dağarcığınız, temalar) sunucumuza yazılır ve size
+        <strong>bir kurtarma kodu</strong> verilir. Bu kod telefon değiştirdiğinizde ya da tarayıcı
+        verinizi sildiğinizde kaydınıza ulaşmanızı sağlar.
+      </p>
+      <ul>
+        <li>Kurtarma kodunun kendisi sunucuda <strong>saklanmaz</strong>; yalnızca geri döndürülemez
+          bir özeti (SHA-256) tutulur.</li>
+        <li>Yedeğe erişimin tek yolu koddur. Kodu kimseyle paylaşmayın.</li>
+        <li>Yedekte ad, e-posta, telefon gibi hiçbir kişisel bilgi yoktur; yalnızca oyun ilerlemesi.</li>
+        <li><strong>Rekabet</strong> sekmesindeki “Yedeklemeyi kapat” ile kaydınızı istediğiniz an
+          sunucudan kalıcı olarak silebilirsiniz.</li>
+      </ul>
+
       <h2>4. Kullandığımız hizmet</h2>
       <p>
         Lider tablosu <strong>Supabase</strong> altyapısında barındırılır. Supabase, yukarıda sayılan
@@ -137,8 +153,10 @@
       <p>
         Yazı tipleri de dahil olmak üzere uygulamanın tüm dosyaları kendi sunucumuzdan gelir. Yaygın
         uygulamanın aksine yazı tiplerini Google Fonts üzerinden çekmiyoruz; çekseydik uygulamayı
-        her açtığınızda IP adresiniz Google'a gidecekti. Lider tablosuna katılmadığınız sürece
-        uygulama <strong>hiçbir dış sunucuya bağlanmaz</strong>.
+        her açtığınızda IP adresiniz Google'a gidecekti. Lider tablosuna katılmadığınız
+        <em>ve</em> yedeklemeyi açmadığınız sürece uygulama
+        <strong>hiçbir dış sunucuya bağlanmaz</strong>; ikisi de kapalıyken oyun tamamen
+        çevrimdışı çalışır.
       </p>
 
       <h2>5. Çocukların gizliliği</h2>
@@ -225,6 +243,23 @@
           within 30 days.
         </p>
 
+        <h2>3b. If you turn on backup</h2>
+        <p>
+          Backup is also <strong>optional</strong> and separate from the leaderboard. If you turn it
+          on, your game progress (level, coins, your vocabulary, themes) is written to our server and
+          you are given a <strong>recovery code</strong>. That code is what lets you reach your save
+          after changing phones or clearing your browser data.
+        </p>
+        <ul>
+          <li>The recovery code itself is <strong>not stored</strong> on the server; only an
+            irreversible hash of it (SHA-256) is kept.</li>
+          <li>The code is the only way to reach a backup. Do not share it with anyone.</li>
+          <li>A backup contains no name, email, phone number or any other personal detail — only
+            game progress.</li>
+          <li>You can permanently delete it at any time with “Turn off backup” in the
+            <strong>Leaderboard</strong> tab.</li>
+        </ul>
+
         <h2>4. Service we use</h2>
         <p>
           The leaderboard is hosted on <strong>Supabase</strong>. Supabase stores the data listed
@@ -235,8 +270,9 @@
         <p>
           Every file the app needs, fonts included, is served from our own server. Unlike most sites
           we do not pull fonts from Google Fonts; doing so would send your IP address to Google each
-          time you opened the app. Unless you join the leaderboard, the app
-          <strong>never connects to any external server</strong>.
+          time you opened the app. Unless you join the leaderboard <em>and</em> unless you turn on
+          backup, the app <strong>never connects to any external server</strong>; with both off the
+          game runs entirely offline.
         </p>
 
         <h2>5. Children's privacy</h2>

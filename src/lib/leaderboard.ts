@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase';
+import { getSupabase } from './supabase.ts';
 import type { GameState } from './storage';
 
 const NICKNAME_KEY = 'worddash_nickname';
