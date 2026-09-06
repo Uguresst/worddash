@@ -26,3 +26,7 @@ dev-dist
 *.njsproj
 *.sln
 *.sw?
+
+# Magaza gorselleri uretilirken olusan gecici sablon (npm run store:assets).
+# Uretilen PNG.ler repoda KALIYOR -- Play Console yuklemesi icin lazim.
+store/_feature.html

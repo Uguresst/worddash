@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.worddash.app",
+      "sha256_cert_fingerprints": [
+        "PLAY_APP_SIGNING_SERTIFIKA_PARMAK_IZI_BURAYA",
+        "YEREL_IMZALAMA_ANAHTARI_PARMAK_IZI_BURAYA"
+      ]
+    }
+  }
+]

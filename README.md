@@ -19,6 +19,16 @@ ayrı klasör, ayrı git geçmişi, ayrı (henüz kurulmamış) Supabase projesi
   karşılığı tekerlekten önce gösterilir — oyun "harfleri karıştır"
   bulmacasından "Türkçesini bil, İngilizcesini kur" çeviri egzersizine
   dönüşür. Üstteki düğmeyle kapatılıp saf anagram moduna geçilebilir.
+- **Konu paketleri** ([`wordPacks.ts`](src/lib/wordPacks.ts)): 18 paket,
+  **1.293 kelime**. Temel'den başlayıp yiyecek, hayvanlar, ev, vücut, aile,
+  giyim, doğa, şehir, seyahat, okul, meslekler, zaman, spor, teknoloji,
+  duygular, fiiller ve sıfatlara gidiyor. İlgili kelimelerin art arda
+  gelmesi hem hatırlamayı kolaylaştırıyor hem de oyuna görünür bir hedef
+  veriyor.
+- **Paket haritası** ([`PackMap.tsx`](src/components/PackMap.tsx)): 18
+  paketin tamamı, kilitliler dahil, adı ve ikonuyla görünüyor. Kilitli paket
+  bir ceza değil **reklam** -- oyuncuya sonraki oturumun sebebini veriyor.
+  Bir paketi bitirmek +40 jeton (tek kelime +2 iken).
 - **Seviye ilerlemesi** ([`levels.ts`](src/lib/levels.ts)): sınırsız, art
   arda kelime çözersin; liste bitince baştan döner. Zorluk harf sayısına
   göre kolay/orta/zor rozetiyle gösterilir.
@@ -34,14 +44,27 @@ ayrı klasör, ayrı git geçmişi, ayrı (henüz kurulmamış) Supabase projesi
 ## Komutlar
 
 ```
-npm run dev      # Vite dev sunucusu (http://localhost:5173)
-npm run build    # production build (tsc -b + vite build)
-npm run lint     # oxlint
-npm run preview  # build'i yerelde önizle
+npm run dev           # Vite dev sunucusu (http://localhost:5173)
+npm run build         # production build (tsc -b + vite build)
+npm run lint          # oxlint
+npm run preview       # build'i yerelde önizle
+npm run check:words   # kelime havuzu: mükerrer, harf sınırı, zorluk sırası
+npm run check:levels  # seviye <-> paket eşlemesi (1.293 seviyenin tamamı)
+npm run check         # yukarıdakilerin hepsi + tsc + oxlint
+npm run store:assets  # Play Console görselleri (önce build + preview gerekir)
 ```
 
-Ayrı test/typecheck script'i yok (proje küçük) — build zaten `tsc -b`
-içeriyor, tip hatası varsa build patlar.
+Ayrı bir test koşucusu yok ama **iki mekanik doğrulayıcı var** ve ikisi de
+gözle yakalanamayacak hataları yakalamak için yazıldı:
+
+- [`check-words.mjs`](scripts/check-words.mjs) — 1.293 kelimelik elle
+  yazılmış bir veri dosyasında mükerrer kelimeyi ya da tekerleğe sığmayan
+  bir kelimeyi gözle bulmak mümkün değil. İlk çalıştırmada 11 mükerrer
+  kelime + 8 sıralama hatası buldu.
+- [`check-levels.mjs`](scripts/check-levels.mjs) — seviye/paket
+  eşlemesinin **tamamını** tarıyor (örnekleme değil; sınır hataları tam
+  olarak paket geçişlerinde saklanır). Bu hataların hiçbiri derlemede
+  patlamaz, hepsi oyuncuya sessizce yanlış bilgi gösterirdi.
 
 ## Mimari kararlar
 
@@ -62,22 +85,51 @@ içeriyor, tip hatası varsa build patlar.
   mantığı) kullanıcıyı sınırlıyordu — bir kere çözünce yapacak şey
   kalmıyordu. v2 sınırsız ilerleme veriyor. v1'den kalan kelime dağarcığı
   varsa `storage.ts` içindeki migrasyon onu v2'ye taşıyor.
-- **Kelime listesi** ([`wordList.ts`](src/lib/wordList.ts)): 198 kelime,
-  2–10 harf, **artan zorlukta sıralı** (dizideki sıra = oyundaki zorluk
-  eğrisi). Her kelime İngilizce + Türkçe karşılığıyla. Yeni kelime eklerken
-  tek kural: doğru uzunluk grubunun içine ekle.
+- **Kelime içeriği** ([`wordPacks.ts`](src/lib/wordPacks.ts)): 18 paket,
+  1.293 kelime, 2–9 harf. Paket sırası ve paket içi sıra **zorluk eğrisidir**.
+  Kelime eklerken kurallar `npm run check:words` tarafından zorlanıyor:
+  yalnızca küçük a-z, 2–9 harf, hiçbir kelime iki pakette birden, Türkçe
+  karşılık tek ve net.
+- **`state.level` tek küresel sayaç olarak KALDI**, paketler onun üstüne
+  türetiliyor ([`levels.ts`](src/lib/levels.ts)). Ayrı bir "hangi
+  paketteyim" state'i yok. Sebep: mevcut localStorage kayıtları ve lider
+  tablosundaki `best_level` hiçbir göç gerektirmeden çalışmaya devam
+  ediyor, rozet metrikleri de hâlâ geri gidemeyen tek bir sayıya bakıyor
+  (bkz. `achievements.ts`).
+
+## Play Store
+
+Mağaza metinleri, veri güvenliği formu cevapları, içerik derecelendirme
+cevapları ve adım adım yayına alma sırası: **[`store/magaza-metni.md`](store/magaza-metni.md)**.
+
+Görseller `store/` içinde hazır (öne çıkan görsel 1024×500, beş telefon
+ekran görüntüsü 1080×1920); `npm run store:assets` ile yeniden üretiliyor.
+
+### Gizlilik ve veri silme
+
+[`public/gizlilik.html`](public/gizlilik.html) — TR + EN, Play Console'un
+zorunlu tuttuğu canlı URL. Toplanan verinin tamamı sayılıyor.
+
+Google, hesap oluşturan uygulamalarda (WordDash'in anonim `auth.users`
+satırı da buna dahil) **uygulama içinden** ulaşılabilir bir silme yolu şart
+koşuyor. Rekabet sekmesindeki "Lider tablosundan ayrıl" bunu karşılıyor.
+
+> **Dikkat:** İlk lider tablosu göçünde SELECT/INSERT/UPDATE politikaları
+> vardı ama **DELETE yoktu** — RLS açık bir tabloda politikası olmayan işlem
+> varsayılan olarak reddedilir, yani silme sessizce başarısız oluyordu.
+> `20260906090000_leaderboard_self_delete.sql` **elle çalıştırılmalı**
+> (projede bağlı CLI yok). Çalıştırılmazsa veri silme beyanı yalan olur.
 
 ## Yapılacaklar
 
 - ~~**Deploy.**~~ **Bitti** — [worddash-seven.vercel.app](https://worddash-seven.vercel.app),
   GitHub'a bağlı ([github.com/Uguresst/worddash](https://github.com/Uguresst/worddash)),
   push'ta otomatik yeniden deploy oluyor (Afsar Gym Lab'la aynı akış).
-  Manifest ve tüm ikonlar canlıda doğrulandı.
-- **Android'e TWA olarak paketleme.** Afsar Gym Lab'da kullandığımız
-  Bubblewrap akışı burada da aynen uygulanabilir — deploy şartı artık
-  karşılandı, sıradaki adım bu.
-- **Kelime listesini büyütmek / temalandırmak** (ör. yiyecek, hayvan,
-  seyahat paketleri) düşünülebilir. Şu an 198 kelime, tek havuz.
+- ~~**Kelime listesini büyütmek / temalandırmak.**~~ **Bitti** — 198 → 1.293
+  kelime, 18 konu paketi.
+- **Android'e TWA olarak paketleme.** Bubblewrap akışı hazır, sıra
+  `store/magaza-metni.md` 8. bölümdeki adımlarda. Parmak izleri için
+  [`public/.well-known/README.txt`](public/.well-known/README.txt).
 
 ## Görsel kimlik
 

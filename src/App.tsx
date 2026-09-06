@@ -769,7 +769,7 @@ export default function App() {
                 <div className="bg-white/8 p-3">
                   <p className="font-display font-bold text-sm">{themeName(th, lang)}</p>
                   <p className="text-[11px] text-white/50 mb-2">
-                    {th.price === 0 ? t('free', lang) : `🪙 ${th.price}`}
+                    {th.price === 0 ? t('free', lang) : owned ? t('owned', lang) : `🪙 ${th.price}`}
                   </p>
                   <button
                     onClick={() => handleThemeAction(th.id, th.price, owned)}

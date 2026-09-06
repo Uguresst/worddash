@@ -23,6 +23,13 @@ export default defineConfig({
         background_color: '#020617',
         display: 'standalone',
         start_url: '/',
+        scope: '/',
+        // Play Store ve PWA yukleme kartlari bu iki alani okuyor: kategori
+        // magazadaki siniflandirmayi, id ise manifest tasinsa bile ayni
+        // uygulama olarak taninmasini sagliyor.
+        id: '/',
+        categories: ['games', 'education', 'word'],
+        orientation: 'portrait',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
