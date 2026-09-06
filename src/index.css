@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Kendi barindirdigimiz yazi tipleri (scripts/fetch-fonts.mjs uretiyor).
+   Google'dan cekilmiyor: gizlilik beyanimiz "ucuncu taraf yok" diyor ve
+   oyun cevrimdisi de dogru yazi tipiyle acilmali. */
+@import "./fonts.css";
 
 /* Baloo 2: yuvarlak, kalın, oyunsu -- başlıklar/rakamlar icin (font-display).
    Nunito: ayni aile ruhunda ama okunakli govde metni icin varsayilan. Ikisi

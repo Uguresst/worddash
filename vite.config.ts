@@ -14,6 +14,9 @@ export default defineConfig({
       // install/splash sırasında bu ikonları ağdan okuyor, SW önbelleğinde
       // gereksiz yer kaplamasınlar.
       includeManifestIcons: false,
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      },
       manifest: {
         name: 'WordDash — Kelime Tekerleği',
         short_name: 'WordDash',

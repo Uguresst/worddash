@@ -10,8 +10,10 @@
     "preview": "vite preview",
     "check:words": "node scripts/check-words.mjs",
     "check:levels": "node scripts/check-levels.mjs",
-    "check": "npm run check:words && npm run check:levels && tsc -b && oxlint",
-    "store:assets": "node scripts/gen-store-assets.mjs"
+    "check": "npm run check:words && npm run check:levels && npm run check:srs && tsc -b && oxlint",
+    "store:assets": "node scripts/gen-store-assets.mjs",
+    "check:srs": "node scripts/check-srs.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

@@ -57,9 +57,15 @@ Her doğru cevap jeton kazandırıyor. Jetonla Seri Kalkanı, Atlama Jokeri ve
 7 farklı görsel tema alabiliyorsun. Her 5 doğru cevapta bir ücretsiz sandık
 açılıyor; içinden jeton, güçlendirme ya da nadiren bir tema çıkıyor.
 
+▸ TEKRAR ETMEDEN ÖĞRENİLMEZ
+Bir kelimeyi bir kez bilmek onu öğrenmek değil. Çözdüğün kelimeler artan
+aralıklarla (1, 3, 7, 16, 35 gün) karşına yeniden çıkıyor; bilemediklerin
+ertesi gün geri geliyor. Beş tekrarı geçen kelime "öğrenildi" oluyor.
+
 ▸ KELİME DAĞARCIĞIN BİRİKİYOR
-Çözdüğün her kelime listende kalıyor. Ne öğrendiğini görmek, ne kadar
-oynadığını görmekten daha değerli.
+Çözdüğün her kelime listende kalıyor, her birinin kaç tekrardan geçtiğini
+görüyorsun. Ne öğrendiğini görmek, ne kadar oynadığını görmekten daha
+değerli.
 
 ▸ LİDER TABLOSU (isteğe bağlı)
 İstersen bir takma ad girip diğer oyuncularla yarışırsın. İstemezsen hiç
@@ -68,6 +74,9 @@ katılmazsın — oyunun tamamı zaten çevrimdışı çalışıyor.
 ▸ RAHATSIZ ETMEYEN BİR OYUN
 Reklam yok. Uygulama içi satın alma yok. Kayıt yok, e-posta yok, şifre yok.
 Can beklemek yok, oynamak için izin istemek yok. Aç ve oyna.
+
+Lider tablosuna katılmadığın sürece uygulama hiçbir dış sunucuya bağlanmaz;
+tamamen çevrimdışı oynanır.
 
 Türkçe ve İngilizce arayüz desteği vardır.
 

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 import type { GameState } from './storage';
 
 const NICKNAME_KEY = 'worddash_nickname';
@@ -35,6 +35,7 @@ function saveNicknameLocally(nickname: string): void {
  * ziyarette skor sıfırdan yeni bir satıra yazılır.
  */
 export async function ensureSession(): Promise<string> {
+  const supabase = await getSupabase();
   const { data: existing } = await supabase.auth.getSession();
   if (existing.session?.user.id) return existing.session.user.id;
 
@@ -57,6 +58,7 @@ export async function setNickname(nickname: string, state: GameState): Promise<v
   const trimmed = nickname.trim().slice(0, 20);
   if (!trimmed) return;
   const userId = await ensureSession();
+  const supabase = await getSupabase();
   const { error } = await supabase.from('leaderboard').upsert({
     id: userId,
     nickname: trimmed,
@@ -78,6 +80,7 @@ export async function submitScore(state: GameState): Promise<void> {
   const nickname = getSavedNickname();
   if (!nickname) return;
   const userId = await ensureSession();
+  const supabase = await getSupabase();
   const { error } = await supabase.from('leaderboard').upsert({
     id: userId,
     nickname,
@@ -101,6 +104,7 @@ export async function submitScore(state: GameState): Promise<void> {
  * bir veri silme yolu şart koşuyor; bu fonksiyon o gerekliliği karşılıyor.
  */
 export async function deleteMyScore(): Promise<void> {
+  const supabase = await getSupabase();
   const { data } = await supabase.auth.getSession();
   const userId = data.session?.user.id;
   if (userId) {
@@ -116,6 +120,7 @@ export async function deleteMyScore(): Promise<void> {
 }
 
 export async function fetchTopScores(limit = 20): Promise<LeaderboardRow[]> {
+  const supabase = await getSupabase();
   const { data, error } = await supabase
     .from('leaderboard')
     .select('id, nickname, best_level, total_coins, best_streak, updated_at')

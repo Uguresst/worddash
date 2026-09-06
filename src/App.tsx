@@ -9,6 +9,7 @@ import DailyRewardModal from './components/DailyRewardModal';
 import ChestModal from './components/ChestModal';
 import InfoTooltip from './components/InfoTooltip';
 import PackMap from './components/PackMap';
+import ReviewSession from './components/ReviewSession';
 import { submitScore } from './lib/leaderboard';
 import { playTap, playCorrect, playWrong, playCelebrate, playCoin, isMuted, toggleMuted } from './lib/sound';
 import { haptics } from './lib/haptics';
@@ -34,6 +35,7 @@ import {
   skipLevel,
   buyPowerup,
   breakStreakIfNeeded,
+  tekrarCevapla,
   streakMultiplier,
   buyChest,
   openChest,
@@ -43,12 +45,14 @@ import {
   type GameState,
   type PowerupKind,
   type ChestReward,
+  type VocabEntry,
 } from './lib/storage';
 import { celebrateWin } from './lib/celebrate';
 import { THEMES, themeById, themeName } from './lib/themes';
 import { rankForLevel, nextRank, type Rank } from './lib/ranks';
 import { ACHIEVEMENTS, isUnlocked } from './lib/achievements';
 import { t } from './lib/i18n';
+import { dagarcikOzeti, tekrarOturumu, ustalasti, USTA_KUTU } from './lib/srs';
 import type { WordEntry, WordPack } from './lib/wordPacks';
 
 const DIFFICULTY_STYLE: Record<Difficulty, string> = {
@@ -72,7 +76,11 @@ function hasSeenOnboarding(): boolean {
 
 export default function App() {
   const [state, setState] = useState<GameState>(() => loadState());
-  const [view, setView] = useState<'game' | 'packs' | 'vocab' | 'shop' | 'leaderboard'>('game');
+  const [view, setView] = useState<'game' | 'packs' | 'vocab' | 'shop' | 'leaderboard' | 'review'>('game');
+  // Tekrar oturumunun kelimeleri BAŞLARKEN dondurulur: oturum sırasında
+  // state.vocabulary her cevapta değişiyor; kuyruk canlı türetilseydi
+  // cevaplanan kelime listeden düşer ve kuyruk oturum ortasında kayardı.
+  const [reviewQueue, setReviewQueue] = useState<VocabEntry[]>([]);
   const word = useMemo(() => wordForLevel(state.level), [state.level]);
   // Harfler dogrudan kelimeden turetiliyor -- ayri bir state+effect cifti
   // yerine memo yeterli, cunku "yeniden karistir" gibi bagimsiz bir eylem yok.
@@ -104,6 +112,7 @@ export default function App() {
   const justLooped = state.level > 0 && state.level % TOTAL_WORDS === 0;
   const difficulty = difficultyOf(word.word);
   const here = packForLevel(state.level);
+  const ozet = useMemo(() => dagarcikOzeti(state.vocabulary), [state.vocabulary]);
   const rank = rankForLevel(state.level);
   const upcomingRank = nextRank(state.level);
   const rankProgress = upcomingRank
@@ -169,6 +178,18 @@ export default function App() {
       // localStorage kapalıysa her açılışta tekrar görünür -- can sıkıcı ama zararsız.
     }
     if (canClaimDaily(state)) setShowDaily(true);
+  }
+
+  function baslatTekrar() {
+    const kuyruk = tekrarOturumu(state.vocabulary);
+    if (kuyruk.length === 0) return;
+    setReviewQueue(kuyruk);
+    setView('review');
+    playTap();
+  }
+
+  function tekrarCevabi(word: string, dogru: boolean) {
+    setState(tekrarCevapla(state, word, dogru));
   }
 
   function handleToggleMute() {
@@ -367,8 +388,15 @@ export default function App() {
               view === 'vocab' ? `${theme.navActiveClass} scale-105 shadow-md` : 'text-white/50 hover:text-white/70'
             }`}
           >
-            <span className="text-lg leading-none">📖</span>
-            <span className="truncate max-w-full">{state.vocabulary.length}</span>
+            <span className="text-lg leading-none relative">
+              📖
+              {/* Tekrar bekleyen varsa kırmızı nokta -- oyuncuyu bu sekmeye
+                  çağıran şey sekmenin adı değil, bu rozet. */}
+              {ozet.bekleyen > 0 && (
+                <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-rose-400 ring-2 ring-slate-950" />
+              )}
+            </span>
+            <span className="truncate max-w-full">{ozet.toplam}</span>
           </button>
           <button
             onClick={() => setView('shop')}
@@ -633,24 +661,83 @@ export default function App() {
             })}
           </div>
 
-          {state.vocabulary.length === 0 ? (
+          {/* Tekrar kartı listenin ÜSTÜNDE: bu sekmenin işi artık "ne
+              çözdüm" değil, "bugün ne tekrar etmeliyim". */}
+          {ozet.toplam > 0 && (
+            <div
+              className={`rounded-2xl border p-4 mb-4 ${
+                ozet.bekleyen > 0 ? 'border-white/25 bg-white/12' : 'border-white/10 bg-white/5'
+              }`}
+            >
+              {ozet.bekleyen > 0 ? (
+                <>
+                  <p className="font-display text-[15px] font-extrabold">
+                    🔁 {ozet.bekleyen} {t('reviewReady', lang)}
+                  </p>
+                  <p className="text-[11px] text-white/55 mt-1 leading-relaxed">{t('reviewWhy', lang)}</p>
+                  <button
+                    onClick={baslatTekrar}
+                    className={`font-display mt-3 w-full rounded-xl py-2.5 text-[14px] font-extrabold ${theme.navActiveClass} active:scale-95 transition-transform`}
+                  >
+                    {t('reviewStart', lang)} →
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="font-display text-[14px] font-bold text-white/80">
+                    ✅ {t('reviewNone', lang)}
+                  </p>
+                  <p className="text-[11px] text-white/50 mt-1">{t('reviewNoneHint', lang)}</p>
+                </>
+              )}
+              <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-4 text-[11px] text-white/60">
+                <span>
+                  <strong className="text-white/90 font-bold">{ozet.toplam}</strong> {t('wordsCount', lang)}
+                </span>
+                <span>
+                  <strong className="text-emerald-300 font-bold">{ozet.usta}</strong> {t('mastered', lang)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {ozet.toplam === 0 ? (
             <p className="text-center text-white/50 text-sm mt-12">{t('emptyVocabulary', lang)}</p>
           ) : (
             <ul className="space-y-2">
-              {[...state.vocabulary].reverse().map((v, i) => (
-                <li
-                  key={`${v.word}-${i}`}
-                  className="flex items-center justify-between bg-white/8 border border-white/10 rounded-xl px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
-                >
-                  <div>
-                    <p lang="en" className="font-bold uppercase text-amber-300">{v.word}</p>
-                    <p className="text-xs text-white/60">{v.tr}</p>
-                  </div>
-                  <p className="text-[10px] text-white/40">
-                    {new Date(v.learnedAt).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US')}
-                  </p>
-                </li>
-              ))}
+              {[...ozet.hepsi].reverse().map((v) => {
+                const usta = ustalasti(v);
+                return (
+                  <li
+                    key={v.word}
+                    className="flex items-center justify-between gap-3 bg-white/8 border border-white/10 rounded-xl px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
+                  >
+                    <div className="min-w-0">
+                      <p lang="en" className="font-bold uppercase text-amber-300 truncate">{v.word}</p>
+                      <p className="text-xs text-white/60 truncate">{v.tr}</p>
+                    </div>
+                    {usta ? (
+                      <span className="shrink-0 text-[10px] font-bold rounded-full bg-emerald-400/20 text-emerald-300 px-2 py-1">
+                        ✓ {t('masteredBadge', lang)}
+                      </span>
+                    ) : (
+                      /* Kutu göstergesi: kaç tekrardan geçtiğini gösteriyor.
+                         Ham bir "kutu 3" sayısı yerine dolan noktalar
+                         ilerlemeyi tek bakışta okutuyor. */
+                      <span className="shrink-0 flex items-center gap-1" title={t('vocabLearning', lang)}>
+                        {Array.from({ length: USTA_KUTU }, (_, k) => (
+                          <span
+                            key={k}
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              k < (v.box ?? 1) ? 'bg-white/75' : 'bg-white/20'
+                            }`}
+                          />
+                        ))}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </main>
@@ -795,6 +882,16 @@ export default function App() {
       )}
 
       {view === 'packs' && <PackMap level={state.level} lang={lang} />}
+
+      {view === 'review' && (
+        <ReviewSession
+          queue={reviewQueue}
+          lang={lang}
+          theme={theme}
+          onAnswer={tekrarCevabi}
+          onFinish={() => setView('vocab')}
+        />
+      )}
 
       {view === 'leaderboard' && <Leaderboard state={state} lang={lang} navActiveClass={theme.navActiveClass} />}
 

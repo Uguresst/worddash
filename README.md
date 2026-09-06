@@ -35,6 +35,12 @@ ayrı klasör, ayrı git geçmişi, ayrı (henüz kurulmamış) Supabase projesi
 - **Jeton + tema mağazası** ([`themes.ts`](src/lib/themes.ts)): her doğru
   cevap +10 jeton (ipucu kullandıysan −3). Jetonla 5 görsel temadan
   (Aurora ücretsiz, diğerleri 50–150) satın alıp seçebilirsin.
+- **Aralıklı tekrar** ([`srs.ts`](src/lib/srs.ts)): çözülen kelimeler
+  Leitner kutu sistemiyle **1, 3, 7, 16, 35 gün** sonra tekrar karşına
+  çıkar; bilemediğin kelime doğrudan 1. kutuya düşüp yarın geri gelir.
+  Oyunun "İngilizce öğret" iddiasını gerçek yapan parça bu -- bir kelimeyi
+  bir kez bilmek onu öğrenmek değil. İkinci faydası en az ilki kadar
+  önemli: yarın uygulamayı açmak için somut bir sebep veriyor.
 - **Kelime dağarcığım**: çözdüğün her kelime tarihiyle birlikte listeye
   eklenir. **Seri (streak)**: ipucu kullanmadan art arda doğru bilme sayısı,
   en iyisi kalıcı tutulur.
@@ -50,6 +56,8 @@ npm run lint          # oxlint
 npm run preview       # build'i yerelde önizle
 npm run check:words   # kelime havuzu: mükerrer, harf sınırı, zorluk sırası
 npm run check:levels  # seviye <-> paket eşlemesi (1.293 seviyenin tamamı)
+npm run check:srs     # aralıklı tekrar mantığı (kutular, aralıklar, oturum)
+npm run fonts         # yazı tiplerini indirip public/fonts + src/fonts.css üret
 npm run check         # yukarıdakilerin hepsi + tsc + oxlint
 npm run store:assets  # Play Console görselleri (önce build + preview gerekir)
 ```
@@ -65,6 +73,10 @@ gözle yakalanamayacak hataları yakalamak için yazıldı:
   eşlemesinin **tamamını** tarıyor (örnekleme değil; sınır hataları tam
   olarak paket geçişlerinde saklanır). Bu hataların hiçbiri derlemede
   patlamaz, hepsi oyuncuya sessizce yanlış bilgi gösterirdi.
+- [`check-srs.mjs`](scripts/check-srs.mjs) — aralıklı tekrar mantığı.
+  Buradaki hatalar oyunda hiç görünmez ama öğrenmeyi bozar: yanlış bilinen
+  kelime uzun aralığa atılırsa haftalarca sorulmaz, oturum sınırı
+  çalışmazsa oyuncunun karşısına 300 kelimelik bir liste çıkar.
 
 ## Mimari kararlar
 
@@ -96,6 +108,23 @@ gözle yakalanamayacak hataları yakalamak için yazıldı:
   tablosundaki `best_level` hiçbir göç gerektirmeden çalışmaya devam
   ediyor, rozet metrikleri de hâlâ geri gidemeyen tek bir sayıya bakıyor
   (bkz. `achievements.ts`).
+
+## Performans ve gizlilik kararları
+
+- **Yazı tipleri kendi sunucumuzda** ([`fetch-fonts.mjs`](scripts/fetch-fonts.mjs)).
+  Google Fonts'tan çekilirken her kullanıcının IP'si Google'a gidiyordu --
+  oysa gizlilik politikamız "üçüncü taraf yok" diyor. Ayrıca çevrimdışında
+  yazı tipleri inmiyordu. Betik yalnızca latin + latin-ext indiriyor ve
+  dosyaları içeriğe göre **tekilleştiriyor**: Google bir ailenin her ağırlığı
+  için aynı değişken font dosyasını verdiği için naif indirme 410 KB
+  yazıyordu, tekilleştirilmiş hâli 132 KB.
+- **Supabase tembel yükleniyor** ([`supabase.ts`](src/lib/supabase.ts)).
+  Kütüphane ana paketin en büyük parçasıydı ve içinde oyunun hiç
+  kullanmadığı realtime (websocket) istemcisi de vardı. Lider tablosu ise
+  tamamen isteğe bağlı. Artık ancak gerçekten katılan oyuncu indiriyor:
+  ana paket **508 KB → 307 KB** (gzip 149 → 97 KB).
+- Servis çalışanının `globPatterns`'ine `woff2` eklendi; varsayılanda yok
+  ve eklenmezse fontlar önbelleğe girmeyip çevrimdışında yedek fonta düşer.
 
 ## Play Store
 

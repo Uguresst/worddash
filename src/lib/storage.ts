@@ -1,4 +1,5 @@
 import type { WordEntry } from './wordPacks';
+import { ilkTekrar, sonrakiTekrar } from './srs';
 import { THEMES } from './themes';
 
 /**
@@ -14,6 +15,13 @@ const KEY = 'worddash_state_v2';
 
 export interface VocabEntry extends WordEntry {
   learnedAt: number; // Date.now() -- gösterimde "az önce/dün" gibi göreceli çevrilebilsin diye
+  /**
+   * Aralıklı tekrar durumu (bkz. srs.ts). İkisi de OPSİYONEL çünkü v3'ten
+   * önce kaydedilmiş kelimelerde yok -- loadState onları göçürüyor, ama
+   * okuyan her yer yine de `?? 1` ile savunmalı davranmalı.
+   */
+  box?: number;
+  dueAt?: number;
 }
 
 export interface GameState {
@@ -76,10 +84,37 @@ export function loadState(): GameState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return migrateFromV1() ?? { ...DEFAULT_STATE };
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_STATE, ...parsed };
+    return gocurTekrarAlanlari({ ...DEFAULT_STATE, ...parsed });
   } catch {
     return { ...DEFAULT_STATE };
   }
+}
+
+/**
+ * v3 öncesi kaydedilmiş kelimelerde tekrar alanları yok. Hepsini birden
+ * "şimdi tekrar edilmeli" yapmak, 300 kelime biriktirmiş bir oyuncuya ilk
+ * açılışta 300 kelimelik bir borç göstermek olurdu -- bu, tekrar özelliğini
+ * hiç başlatmamasının en garantili yolu. Onun yerine öğrenilme tarihine
+ * göre DAĞITILIYOR: eski kelimeler önce, yeniler sonra sıraya giriyor.
+ */
+function gocurTekrarAlanlari(state: GameState): GameState {
+  if (!state.vocabulary.some((v) => v.box === undefined)) return state;
+  const simdi = Date.now();
+  const sirali = [...state.vocabulary].sort((a, b) => a.learnedAt - b.learnedAt);
+  const sira = new Map(sirali.map((v, i) => [v, i]));
+  return {
+    ...state,
+    vocabulary: state.vocabulary.map((v) =>
+      v.box !== undefined
+        ? v
+        : {
+            ...v,
+            box: 1,
+            // Her gün en fazla bir oturumluk kelime vadesi geliyor.
+            dueAt: simdi + Math.floor((sira.get(v) ?? 0) / 12) * 86_400_000,
+          },
+    ),
+  };
 }
 
 /** v1'de biriktirilmiş kelime dağarcığı varsa kaybetmeyelim, seviyeye taşıyalım. */
@@ -176,7 +211,7 @@ export function completeLevel(
     totalCoinsEarned: state.totalCoinsEarned + total,
     currentStreak,
     bestStreak: Math.max(state.bestStreak, currentStreak),
-    vocabulary: [...state.vocabulary, { ...entry, learnedAt: Date.now() }],
+    vocabulary: [...state.vocabulary, { ...entry, learnedAt: Date.now(), ...ilkTekrar() }],
     streakShields: state.streakShields - (shieldConsumed ? 1 : 0),
     chestProgress: chestRollover ? 0 : chestProgress,
     chestsReady: state.chestsReady + (chestRollover ? 1 : 0),
@@ -190,6 +225,40 @@ export function completeLevel(
 export function skipLevel(state: GameState): GameState {
   if (state.skipTokens <= 0) return state;
   const next: GameState = { ...state, level: state.level + 1, skipTokens: state.skipTokens - 1 };
+  saveState(next);
+  return next;
+}
+
+/**
+ * Tekrar başına kazanç. Yeni kelimeyle (COINS_PER_WIN) aynı tutuluyor ama
+ * SÖMÜRÜLEMİYOR: tekrar edilebilecek kelime sayısı, oyuncunun daha önce
+ * gerçekten çözdüğü ve vadesi gelmiş kelimelerle sınırlı. Yani "tekrar
+ * çiftliği" kurmak mümkün değil, sınır sistemin kendisinden geliyor.
+ */
+const COINS_PER_REVIEW = 2;
+
+/**
+ * Bir tekrar cevabını işler. AYNI kelimenin tüm kayıtlarını günceller --
+ * liste başa sardığında bir kelime dağarcıkta birden çok kez bulunabiliyor
+ * ve bunların tekrar durumları ayrışırsa aynı kelime aynı gün iki kez
+ * sorulur.
+ */
+export function tekrarCevapla(state: GameState, word: string, dogru: boolean): GameState {
+  const simdi = Date.now();
+  let bulundu = false;
+  const vocabulary = state.vocabulary.map((v) => {
+    if (v.word !== word) return v;
+    bulundu = true;
+    return { ...v, ...sonrakiTekrar(v, dogru, simdi) };
+  });
+  if (!bulundu) return state;
+  const kazanc = dogru ? COINS_PER_REVIEW : 0;
+  const next: GameState = {
+    ...state,
+    vocabulary,
+    coins: state.coins + kazanc,
+    totalCoinsEarned: state.totalCoinsEarned + kazanc,
+  };
   saveState(next);
   return next;
 }
